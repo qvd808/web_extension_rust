@@ -6,9 +6,41 @@ import initWasmModule, { show_alert } from "./wasm/wasm_mod.js";
 })();
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.action === "process") {
-    const result = show_alert(msg.data);
-    console.log("The result is: " + result);
-    sendResponse({ result });
+  if (msg.action === "getAllTabs") {
+    chrome.tabs.query({}, async (tabs) => {
+      // Collect all unique group IDs (excluding -1)
+      const groupIds = [
+        ...new Set(tabs.map((t) => t.groupId).filter((id) => id !== -1)),
+      ];
+
+      // Fetch info for all groups in parallel
+      const groupInfoMap = {};
+      await Promise.all(
+        groupIds.map(
+          (id) =>
+            new Promise((resolve) => {
+              chrome.tabGroups.get(id, (group) => {
+                groupInfoMap[id] = group;
+                resolve();
+              });
+            }),
+        ),
+      );
+
+      // Build tab info array with group details
+      const tabInfo = tabs.map((tab) => ({
+        id: tab.id,
+        title: tab.title,
+        url: tab.url,
+        group_id: tab.groupId,
+        group_title:
+          tab.groupId !== -1 ? groupInfoMap[tab.groupId]?.title : null,
+        group_color:
+          tab.groupId !== -1 ? groupInfoMap[tab.groupId]?.color : null,
+      }));
+
+      sendResponse({ tabs: tabInfo });
+    });
+    return true;
   }
 });
