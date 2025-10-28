@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        width: 300px;
+        padding: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      h1 {
+        margin: 0 0 20px 0;
+        font-size: 24px;
+        text-align: center;
+      }
+
+      button {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #667eea;
+        background: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition:
+          transform 0.1s,
+          box-shadow 0.2s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      #output {
+        margin-top: 15px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        min-height: 50px;
+        font-size: 14px;
+        backdrop-filter: blur(10px);
+      }
+
+      .emoji {
+        font-size: 32px;
+        text-align: center;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🦀 Rust + WASM</h1>
+    <div class="emoji">👋</div>
+    <button id="helloBtn">Say Hello!</button>
+    <div id="output"></div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>WASM Browser</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		
+		body {
+			background: #1a1a1a;
+			color: #fff;
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body>
+	<script type="module">
+		// Import and initialize the WASM module
+		// This is ALL the JavaScript needed!
+		import init from './wasm_mod/pkg/wasm_browser.js';
+		
+		async function run() {
+			// Initialize WASM - this automatically calls main() in lib.rs
+			await init();
+			console.log('WASM module loaded and browser started!');
+		}
+		
+		run().catch(console.error);
+	</script>
+</body>
+</html>
