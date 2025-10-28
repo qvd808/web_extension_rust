@@ -1,8 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Collects all Chrome tabs with their group information.
- * Fetches group data concurrently for better performance.
+ * Collects all Chrome tabs with their group information
  */
 export function collect_tabs(): Promise<Array<any>>;
 

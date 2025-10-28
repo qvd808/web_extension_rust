@@ -1,34 +1,15 @@
 use futures::future::join_all;
-use js_sys::{Array, Promise, Reflect};
+use js_sys::Array;
 use serde::Serialize;
 use serde_wasm_bindgen::to_value;
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
-#[wasm_bindgen(inline_js = r#"
-export function getTabsPromise() {
-    return new Promise((resolve, reject) => {
-        try {
-            chrome.tabs.query({}, resolve);
-        } catch (err) {
-            reject(err);
-        }
-    });
-}
-"#)]
-extern "C" {
-    fn getTabsPromise() -> Promise;
-}
-
-#[wasm_bindgen(inline_js = r#"
-export function getGroupTabById(id) {
-    return chrome.tabGroups.get(id);
-}
-"#)]
-extern "C" {
-    fn getGroupTabById(id: u32) -> Promise;
-}
+mod helper;
+mod wasm_bind;
+use crate::helper::{extract_string, extract_u32};
+use crate::wasm_bind::{get_all_tabs, group_tab_by_id};
 
 /// Represents a Chrome tab with its associated group information
 #[derive(Serialize)]
@@ -39,15 +20,14 @@ pub struct TabInfo {
     pub group_title: Option<String>,
 }
 
-/// Collects all Chrome tabs with their group information.
-/// Fetches group data concurrently for better performance.
+/// Collects all Chrome tabs with their group information
 #[wasm_bindgen]
 pub async fn collect_tabs() -> Result<Array, JsValue> {
     // Fetch all tabs
-    let tabs_jsvalue = JsFuture::from(getTabsPromise()).await?;
+    let tabs_jsvalue = JsFuture::from(get_all_tabs()).await?;
     let tabs_array: Array = tabs_jsvalue
         .dyn_into()
-        .map_err(|_| JsValue::from_str("Expected an array from getTabsPromise"))?;
+        .map_err(|_| JsValue::from_str("Expected an array from get_all_tabs"))?;
 
     // Extract tab data and collect unique group IDs
     let mut tab_data = Vec::new();
@@ -56,7 +36,7 @@ pub async fn collect_tabs() -> Result<Array, JsValue> {
     for tab in tabs_array.iter() {
         let id = extract_u32(&tab, "id");
         let title = extract_string(&tab, "title");
-        let group_id = extract_group_id(&tab);
+        let group_id = extract_u32(&tab, "groupId");
 
         if let Some(gid) = group_id {
             group_ids.insert(gid);
@@ -84,16 +64,15 @@ pub async fn collect_tabs() -> Result<Array, JsValue> {
         })
         .collect();
 
-    let values = results?;
-    Ok(values.into_iter().collect::<Array>())
+    Ok(results?.into_iter().collect::<Array>())
 }
 
 /// Fetches group titles for all provided group IDs concurrently
 async fn fetch_group_titles(group_ids: HashSet<u32>) -> HashMap<u32, String> {
     let futures: Vec<_> = group_ids
-        .iter()
-        .map(|&gid| async move {
-            match JsFuture::from(getGroupTabById(gid)).await {
+        .into_iter()
+        .map(|gid| async move {
+            match JsFuture::from(group_tab_by_id(gid)).await {
                 Ok(group_obj) => {
                     let title = extract_string(&group_obj, "title");
                     title.map(|t| (gid, t))
@@ -103,29 +82,5 @@ async fn fetch_group_titles(group_ids: HashSet<u32>) -> HashMap<u32, String> {
         })
         .collect();
 
-    let results = join_all(futures).await;
-    results.into_iter().flatten().collect()
-}
-
-/// Safely extracts a u32 field from a JS object
-fn extract_u32(obj: &JsValue, field: &str) -> Option<u32> {
-    Reflect::get(obj, &JsValue::from_str(field))
-        .ok()
-        .and_then(|v| v.as_f64())
-        .map(|v| v as u32)
-}
-
-/// Safely extracts a String field from a JS object
-fn extract_string(obj: &JsValue, field: &str) -> Option<String> {
-    Reflect::get(obj, &JsValue::from_str(field))
-        .ok()
-        .and_then(|v| v.as_string())
-}
-
-/// Extracts group ID, treating negative values as None (Chrome uses -1 for ungrouped tabs)
-fn extract_group_id(obj: &JsValue) -> Option<u32> {
-    Reflect::get(obj, &JsValue::from_str("groupId"))
-        .ok()
-        .and_then(|v| v.as_f64())
-        .and_then(|v| if v < 0.0 { None } else { Some(v as u32) })
+    join_all(futures).await.into_iter().flatten().collect()
 }

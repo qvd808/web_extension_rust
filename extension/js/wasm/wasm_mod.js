@@ -212,8 +212,7 @@ function makeMutClosure(arg0, arg1, dtor, f) {
     return real;
 }
 /**
- * Collects all Chrome tabs with their group information.
- * Fetches group data concurrently for better performance.
+ * Collects all Chrome tabs with their group information
  * @returns {Promise<Array<any>>}
  */
 export function collect_tabs() {
