@@ -14,8 +14,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
     // ##### Method 2: Using async/await #####
     (async () => {
-      const tabs = await collect_tabs();
-      sendResponse(tabs);
+      try {
+        const tabs = await collect_tabs();
+        sendResponse(tabs);
+      } catch (err) {
+        console.error("Failed to get tabs:", err);
+        sendResponse([]);
+      }
     })();
 
     return true; // keep the channel open

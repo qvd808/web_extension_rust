@@ -1,14 +1,14 @@
 /* tslint:disable */
 /* eslint-disable */
-export function collect_tabs(): Promise<any>;
+export function collect_tabs(): Promise<Array<any>>;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly collect_tabs: () => any;
-  readonly wasm_bindgen__convert__closures_____invoke__heaa27bb3300507c3: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__closure__destroy__h149c0c524a61c0da: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__hbdb57b38c6afce76: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__h44bc0ed3ba61228d: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
