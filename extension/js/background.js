@@ -8,6 +8,7 @@ import initWasmModule, { show_alert } from "./wasm/wasm_mod.js";
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === "process") {
     const result = show_alert(msg.data);
+    console.log("The result is: " + result);
     sendResponse({ result });
   }
 });
