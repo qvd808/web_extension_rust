@@ -1,3 +1,4 @@
+import { getGroupTabById } from './snippets/wasm_mod-bc4ca452742d1bb1/inline1.js';
 import * as __wbg_star0 from './snippets/wasm_mod-bc4ca452742d1bb1/inline0.js';
 
 let wasm;
@@ -338,10 +339,18 @@ function __wbg_get_imports() {
         const ret = arg0.call(arg1);
         return ret;
     }, arguments) };
+    imports.wbg.__wbg_getGroupTabById_18139ff2abd0fc51 = function(arg0) {
+        const ret = getGroupTabById(arg0 >>> 0);
+        return ret;
+    };
     imports.wbg.__wbg_get_7bed016f185add81 = function(arg0, arg1) {
         const ret = arg0[arg1 >>> 0];
         return ret;
     };
+    imports.wbg.__wbg_get_efcb449f58ec27c2 = function() { return handleError(function (arg0, arg1) {
+        const ret = Reflect.get(arg0, arg1);
+        return ret;
+    }, arguments) };
     imports.wbg.__wbg_get_with_ref_key_1dc361bd10053bfe = function(arg0, arg1) {
         const ret = arg0[arg1];
         return ret;
@@ -466,14 +475,14 @@ function __wbg_get_imports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return ret;
     };
+    imports.wbg.__wbindgen_cast_7a9218f878f4eac5 = function(arg0, arg1) {
+        // Cast intrinsic for `Closure(Closure { dtor_idx: 19, function: Function { arguments: [Externref], shim_idx: 20, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hbdb57b38c6afce76, wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e);
+        return ret;
+    };
     imports.wbg.__wbindgen_cast_d6cd19b81560fd6e = function(arg0) {
         // Cast intrinsic for `F64 -> Externref`.
         const ret = arg0;
-        return ret;
-    };
-    imports.wbg.__wbindgen_cast_fb657ce46c6ea996 = function(arg0, arg1) {
-        // Cast intrinsic for `Closure(Closure { dtor_idx: 15, function: Function { arguments: [Externref], shim_idx: 16, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-        const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hbdb57b38c6afce76, wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e);
         return ret;
     };
     imports.wbg.__wbindgen_init_externref_table = function() {

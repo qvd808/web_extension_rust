@@ -1,3 +1,4 @@
+use futures::future::join_all;
 use js_sys::{Array, Promise};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{from_value, to_value};
@@ -17,6 +18,15 @@ export function getTabsPromise() {
 "#)]
 extern "C" {
     fn getTabsPromise() -> Promise;
+}
+
+#[wasm_bindgen(inline_js = r#"
+export function getGroupTabById(id) {
+    return chrome.tabGroups.get(id);
+}
+"#)]
+extern "C" {
+    fn getGroupTabById(id: u32) -> Promise;
 }
 
 // Using serde serailize and deserialize can be bottle neck performance, if there is performance
@@ -53,10 +63,33 @@ pub async fn collect_tabs() -> Result<Array, JsValue> {
         .dyn_into()
         .map_err(|_| JsValue::from_str("Expected an array from getTabsPromise"))?;
 
-    let mapped_array = tabs_array
+    let tab_infos: Vec<TabInfo> = tabs_array
         .iter()
         .filter_map(|e| from_value(e).ok())
-        .map(|tab_info: TabInfo| to_value(&tab_info).unwrap())
+        .collect();
+
+    // Step 3: fetch group titles asynchronously for each tab
+    let futures_vec = tab_infos.into_iter().map(|mut tab| async move {
+        if let Some(group_id) = tab.group_id {
+            let js_val = JsFuture::from(getGroupTabById(group_id)).await.ok();
+
+            // Chrome returns an object with a "title" property
+            if let Some(obj) = js_val {
+                let title = js_sys::Reflect::get(&obj, &JsValue::from_str("title"))
+                    .ok()
+                    .and_then(|v| v.as_string());
+                tab.group_title = title;
+            }
+        }
+        tab
+    });
+
+    let resolved_tabs: Vec<TabInfo> = join_all(futures_vec).await;
+
+    // Step 4: convert back to JS Array
+    let mapped_array = resolved_tabs
+        .into_iter()
+        .map(|tab_info| to_value(&tab_info).unwrap())
         .collect::<Array>();
 
     Ok(mapped_array)
