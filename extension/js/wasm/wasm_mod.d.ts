@@ -1,18 +1,20 @@
 /* tslint:disable */
 /* eslint-disable */
-export function hello_world(): void;
-export function show_alert(message: string): string;
+export function collect_tabs(): Promise<any>;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly hello_world: () => void;
-  readonly show_alert: (a: number, b: number) => [number, number];
-  readonly __wbindgen_externrefs: WebAssembly.Table;
+  readonly collect_tabs: () => any;
+  readonly wasm_bindgen__convert__closures_____invoke__heaa27bb3300507c3: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__h149c0c524a61c0da: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h44bc0ed3ba61228d: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_exn_store: (a: number) => void;
+  readonly __externref_table_alloc: () => number;
+  readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __wbindgen_start: () => void;
 }
 
