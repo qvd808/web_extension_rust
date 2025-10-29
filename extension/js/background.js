@@ -1,8 +1,12 @@
-import initWasmModule, { collect_tabs } from "./wasm/wasm_mod.js";
+import initWasmModule, {
+  collect_tabs,
+  setup_keybind,
+} from "./wasm/wasm_mod.js";
 
 // Initialized wasm module
 (async () => {
   await initWasmModule();
+  setup_keybind();
 })();
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

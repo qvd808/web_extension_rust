@@ -5,6 +5,7 @@ use serde_wasm_bindgen::to_value;
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
+use web_sys::{console, window, KeyboardEvent};
 
 mod helper;
 mod wasm_bind;
@@ -65,6 +66,65 @@ pub async fn collect_tabs() -> Result<Array, JsValue> {
         .collect();
 
     Ok(results?.into_iter().collect::<Array>())
+}
+
+#[wasm_bindgen]
+pub fn setup_keybind() {
+    let window = match web_sys::window() {
+        Some(w) => w,
+        None => {
+            console::log_1(&"Window is not available!".into());
+            return;
+        }
+    };
+
+    // State for command mode
+    let command_mode = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let sequence = std::rc::Rc::new(std::cell::RefCell::new(Vec::<String>::new()));
+
+    let cm_clone = command_mode.clone();
+    let seq_clone = sequence.clone();
+
+    let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
+        let mut cm = cm_clone.borrow_mut();
+        let mut seq = seq_clone.borrow_mut();
+
+        if !*cm && event.code() == "Space" {
+            *cm = true;
+            seq.clear();
+            console::log_1(&"Command mode activated".into());
+            event.prevent_default();
+            return;
+        }
+
+        if *cm {
+            // Track key sequence (lowercase)
+            seq.push(event.key().to_lowercase());
+
+            // Check for Space + F + F sequence
+            if seq.as_slice() == ["f", "f"] {
+                console::log_1(&"Shortcut Space+F+F triggered!".into());
+                *cm = false; // exit command mode
+                seq.clear();
+            }
+
+            // Optional: reset if sequence gets too long
+            if seq.len() > 2 {
+                *cm = false;
+                seq.clear();
+            }
+
+            event.prevent_default();
+        }
+    }) as Box<dyn FnMut(_)>);
+
+    if let Err(e) =
+        window.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())
+    {
+        console::log_1(&format!("Error adding event listener: {:?}", e).into());
+    }
+
+    closure.forget();
 }
 
 /// Fetches group titles for all provided group IDs concurrently
