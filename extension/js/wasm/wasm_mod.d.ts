@@ -12,10 +12,10 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly collect_tabs: () => any;
   readonly setup_keybind: () => void;
-  readonly wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__closure__destroy__hbdb57b38c6afce76: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__hd170817a8c6d1031: (a: number, b: number, c: any) => void;
   readonly wasm_bindgen__closure__destroy__h7eee87237ecebdb4: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__hbdb57b38c6afce76: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__h44bc0ed3ba61228d: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

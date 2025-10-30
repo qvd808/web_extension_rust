@@ -32,3 +32,37 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   return false;
 });
+
+let currentActiveTab = null;
+
+// When tab becomes active, inject script into it and cleanup previous
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  if (currentActiveTab !== null) {
+    // Tell previous tab to remove listener
+    chrome.tabs
+      .sendMessage(currentActiveTab, { action: "cleanup" })
+      .catch(() => {});
+  }
+
+  currentActiveTab = tabId;
+
+  // Inject listener into newly active tab
+  chrome.scripting
+    .executeScript({
+      target: { tabId },
+      files: ["js/content.js"],
+    })
+    .catch(() => {});
+});
+
+// When active tab reloads, re-inject listener
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" && tab.active) {
+    chrome.scripting
+      .executeScript({
+        target: { tabId },
+        files: ["js/content.js"],
+      })
+      .catch(() => {});
+  }
+});

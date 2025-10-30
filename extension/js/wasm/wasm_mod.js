@@ -224,12 +224,12 @@ export function setup_keybind() {
     wasm.setup_keybind();
 }
 
-function wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e(arg0, arg1, arg2);
-}
-
 function wasm_bindgen__convert__closures_____invoke__hd170817a8c6d1031(arg0, arg1, arg2) {
     wasm.wasm_bindgen__convert__closures_____invoke__hd170817a8c6d1031(arg0, arg1, arg2);
+}
+
+function wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e(arg0, arg1, arg2);
 }
 
 function wasm_bindgen__convert__closures_____invoke__h44bc0ed3ba61228d(arg0, arg1, arg2, arg3) {

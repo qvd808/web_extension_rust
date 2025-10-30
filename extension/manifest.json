@@ -1,17 +1,23 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Rust WASM Extension",
   "version": "1.0",
-  "permissions": ["tabs", "tabGroups"],
-  "browser_action": {
+  "permissions": ["tabs", "activeTab", "scripting", "tabGroups"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "js/background.js",
+    "type": "module"
+  },
+  "action": {
     "default_popup": "js/popup.html"
   },
-  "background": {
-    "scripts": ["js/background.js"],
-    "persistent": false
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
-  "content_security_policy": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
   "web_accessible_resources": [
-    "js/wasm/*.wasm"
+    {
+      "resources": ["js/wasm/*.wasm"],
+      "matches": ["<all_urls>"]
+    }
   ]
 }
