@@ -25,7 +25,10 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
       target: { tabId },
       files: ["js/content.js"],
     })
-    .catch(() => {});
+    // Script injection may fail on restricted pages like chrome://, which is expected.
+    .catch((err) => {
+      console.error("Error injecting content.js into tab " + tabId + ":", err);
+    });
 });
 
 // When active tab reloads, re-inject listener
