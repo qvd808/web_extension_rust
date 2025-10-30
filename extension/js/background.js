@@ -14,7 +14,9 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
     // Tell previous tab to remove listener
     chrome.tabs
       .sendMessage(currentActiveTab, { action: "cleanup" })
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Error cleaning up previous tab:", err);
+      });
   }
 
   currentActiveTab = tabId;
