@@ -5,6 +5,7 @@ use serde_wasm_bindgen::to_value;
 use std::collections::{HashMap, HashSet};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
+use web_sys::{console, window, KeyboardEvent};
 
 mod helper;
 mod wasm_bind;
