@@ -1,4 +1,8 @@
-import initWasmModule, { collect_tabs } from "./wasm/wasm_mod.js";
+import initWasmModule, {
+  collect_tabs,
+  initialize_tabs,
+  fuzzy_search,
+} from "./wasm/wasm_mod.js";
 
 // Initialized wasm module
 (async () => {
@@ -49,8 +53,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // Handle event from content script
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  console.log("Background received message:", msg);
-
   if (msg.action === "commandTriggered") {
     switch (msg.command) {
       case "FuzzyFinder":
@@ -63,7 +65,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         (async () => {
           try {
             const tabs = await collect_tabs();
-            sendResponse(tabs);
+            initialize_tabs(tabs);
+            const result = fuzzy_search("tiny");
+            sendResponse(result);
           } catch (err) {
             console.error("Failed to get tabs:", err);
             sendResponse([]);

@@ -1,11 +1,12 @@
 use futures::future::join_all;
 use js_sys::Array;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::to_value;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use sublime_fuzzy::best_match;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{console, window, KeyboardEvent};
 
 mod helper;
 mod wasm_bind;
@@ -13,12 +14,56 @@ use crate::helper::{extract_string, extract_u32};
 use crate::wasm_bind::{get_all_tabs, group_tab_by_id};
 
 /// Represents a Chrome tab with its associated group information
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct TabInfo {
     pub id: Option<u32>,
     pub title: Option<String>,
     pub group_id: Option<u32>,
     pub group_title: Option<String>,
+}
+
+thread_local! {
+    static TABS: RefCell<Vec<TabInfo>> = RefCell::new(Vec::new());
+
+    static LAST_QUERY: RefCell<String> = RefCell::new(String::new());
+    static LAST_RESULTS: RefCell<Vec<usize>> = RefCell::new(Vec::new());
+}
+
+#[wasm_bindgen]
+pub fn initialize_tabs(tabs: JsValue) -> Result<(), JsValue> {
+    let tabs: Vec<TabInfo> = serde_wasm_bindgen::from_value(tabs)?;
+    TABS.with(|t| *t.borrow_mut() = tabs);
+    Ok(())
+}
+
+#[wasm_bindgen]
+pub fn fuzzy_search(query: &str) -> Result<Array, JsValue> {
+    TABS.with(|tabs| {
+        let tabs_ref = tabs.borrow();
+        let mut scored: Vec<_> = tabs_ref
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, tab)| {
+                let title = tab.title.as_ref()?;
+                best_match(query, title).map(|m| (idx, tab, m.score()))
+            })
+            .collect();
+
+        scored.sort_by(|a, b| b.2.cmp(&a.2));
+
+        LAST_QUERY.with(|lq| *lq.borrow_mut() = query.to_string());
+        LAST_RESULTS.with(|lr| {
+            *lr.borrow_mut() = scored.iter().map(|(idx, _, _)| *idx).collect();
+        });
+
+        scored
+            .into_iter()
+            .take(50)
+            .map(|(_, tab, _)| to_value(tab))
+            .collect::<Result<Vec<_>, _>>()
+            .map(|v| v.into_iter().collect())
+            .map_err(|e| e.into())
+    })
 }
 
 /// Collects all Chrome tabs with their group information

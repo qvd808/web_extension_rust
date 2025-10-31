@@ -1,19 +1,19 @@
 /* tslint:disable */
 /* eslint-disable */
+export function initialize_tabs(tabs: any): void;
+export function fuzzy_search(query: string): Array<any>;
 /**
  * Collects all Chrome tabs with their group information
  */
 export function collect_tabs(): Promise<Array<any>>;
-export function setup_keybind(): void;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly initialize_tabs: (a: any) => [number, number];
+  readonly fuzzy_search: (a: number, b: number) => [number, number, number];
   readonly collect_tabs: () => any;
-  readonly setup_keybind: () => void;
-  readonly wasm_bindgen__convert__closures_____invoke__hd170817a8c6d1031: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__closure__destroy__h7eee87237ecebdb4: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__hfe341c4c05e79e5e: (a: number, b: number, c: any) => void;
   readonly wasm_bindgen__closure__destroy__hbdb57b38c6afce76: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__h44bc0ed3ba61228d: (a: number, b: number, c: any, d: any) => void;
@@ -22,6 +22,7 @@ export interface InitOutput {
   readonly __wbindgen_exn_store: (a: number) => void;
   readonly __externref_table_alloc: () => number;
   readonly __wbindgen_externrefs: WebAssembly.Table;
+  readonly __externref_table_dealloc: (a: number) => void;
   readonly __wbindgen_start: () => void;
 }
 

@@ -34,6 +34,7 @@ if (!window.keybindListenerInstalled) {
   // 3️⃣ Wrap sendMessage in a promise to allow async/await
   function sendMessageAsync(message) {
     return new Promise((resolve, reject) => {
+      // Can we wrap this in rust so we can make this api not depend non the browser
       chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError);
@@ -102,7 +103,8 @@ if (!window.keybindListenerInstalled) {
 
   document.addEventListener("keydown", keydownHandler);
 
-  // 6️⃣ Cleanup listener when tab becomes inactive
+  // Cleanup listener when tab becomes inactive
+  // Can we wrap this in rust so we can make this api not depend non the browser
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === "cleanup") {
       console.log("Cleaning up key listener");

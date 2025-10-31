@@ -11,13 +11,18 @@
   "action": {
     "default_popup": "js/popup.html"
   },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  },
   "web_accessible_resources": [
     {
-      "resources": ["js/wasm/*.wasm"],
+      "resources": [
+        "js/wasm/*.wasm",
+        "js/search.html",
+        "js/search.js",
+        "js/search.css"
+      ],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline';"
+  }
 }
