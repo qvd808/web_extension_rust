@@ -17,3 +17,9 @@ pub fn extract_string(obj: &JsValue, field: &str) -> Option<String> {
         .ok()
         .and_then(|v| v.as_string())
 }
+
+pub fn extract_f64(obj: &JsValue, field: &str) -> Option<f64> {
+    Reflect::get(obj, &JsValue::from_str(field))
+        .ok()
+        .and_then(|v| v.as_f64())
+}

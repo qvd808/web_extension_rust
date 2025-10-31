@@ -10,7 +10,7 @@ use wasm_bindgen_futures::JsFuture;
 
 mod helper;
 mod wasm_bind;
-use crate::helper::{extract_string, extract_u32};
+use crate::helper::{extract_f64, extract_string, extract_u32};
 use crate::wasm_bind::{get_all_tabs, group_tab_by_id};
 
 /// Represents a Chrome tab with its associated group information
@@ -18,6 +18,8 @@ use crate::wasm_bind::{get_all_tabs, group_tab_by_id};
 pub struct TabInfo {
     pub id: Option<u32>,
     pub title: Option<String>,
+    pub url: Option<String>,
+    pub last_accessed: Option<f64>,
     pub group_id: Option<u32>,
     pub group_title: Option<String>,
 }
@@ -82,13 +84,15 @@ pub async fn collect_tabs() -> Result<Array, JsValue> {
     for tab in tabs_array.iter() {
         let id = extract_u32(&tab, "id");
         let title = extract_string(&tab, "title");
+        let url = extract_string(&tab, "url");
+        let last_accessed = extract_f64(&tab, "lastAccessed");
         let group_id = extract_u32(&tab, "groupId");
 
         if let Some(gid) = group_id {
             group_ids.insert(gid);
         }
 
-        tab_data.push((id, title, group_id));
+        tab_data.push((id, title, url, last_accessed, group_id));
     }
 
     // Fetch all group titles concurrently
@@ -97,12 +101,14 @@ pub async fn collect_tabs() -> Result<Array, JsValue> {
     // Build final result
     let results: Result<Vec<_>, _> = tab_data
         .into_iter()
-        .map(|(id, title, group_id)| {
+        .map(|(id, title, url, last_accessed, group_id)| {
             let group_title = group_id.and_then(|gid| group_titles.get(&gid).cloned());
 
             to_value(&TabInfo {
                 id,
                 title,
+                url,
+                last_accessed,
                 group_id,
                 group_title,
             })

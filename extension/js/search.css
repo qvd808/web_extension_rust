@@ -1,7 +1,7 @@
 /* extension/js/search.css */
 body {
   margin: 0;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
   background-color: transparent;
   color: #e0e0e0;
   height: 100vh;
@@ -9,54 +9,125 @@ body {
   justify-content: center;
   align-items: center;
   position: relative;
+  overflow: hidden;
 }
 
 .search-overlay {
-  width: 800px;
-  height: 400px;
-  background-color: #1e1e1e;
-  border: 1px solid #3c3c3c;
-  border-radius: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  width: 900px;
+  height: 500px;
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: row;
   overflow: hidden;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Left panel - Search */
 .search-panel {
-  width: 40%;
+  width: 45%;
   display: flex;
   flex-direction: column;
-  background-color: #252526;
-  border-right: 1px solid #3c3c3c;
+  background-color: #242424;
+  border-right: 1px solid #333;
 }
 
 #search-input {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 14px;
+  padding: 16px 20px;
+  font-size: 15px;
   border: none;
-  border-bottom: 1px solid #3c3c3c;
-  background-color: #1e1e1e;
-  color: #cccccc;
+  border-bottom: 2px solid #333;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
   outline: none;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+  transition: border-color 0.2s;
 }
 
 #search-input::placeholder {
-  color: #6a737d;
+  color: #666;
 }
 
 #search-input:focus {
-  background-color: #2d2d30;
+  border-bottom-color: #4a9eff;
+  background-color: #1e1e1e;
 }
 
 #results-container {
   flex: 1;
   overflow-y: auto;
-  background-color: #252526;
+  background-color: #242424;
   padding: 0;
+}
+
+.result-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #2a2a2a;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.result-item:hover {
+  background-color: #2d2d2d;
+}
+
+.result-item.selected {
+  background-color: #2a4a6a;
+  border-left: 3px solid #4a9eff;
+  padding-left: 17px;
+}
+
+.result-item.selected::before {
+  content: "▶";
+  position: absolute;
+  right: 16px;
+  color: #4a9eff;
+  font-size: 10px;
+}
+
+.result-title {
+  font-size: 14px;
+  color: #e0e0e0;
+  margin-bottom: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-item.selected .result-title {
+  color: #fff;
+}
+
+.result-group {
+  font-size: 11px;
+  color: #888;
+}
+
+.result-item.selected .result-group {
+  color: #aaa;
+}
+
+.no-results {
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
 }
 
 #results-container div {
@@ -80,9 +151,9 @@ body {
 
 /* Right panel - Preview */
 .preview-panel {
-  width: 60%;
-  background-color: #1e1e1e;
-  padding: 20px;
+  width: 55%;
+  background-color: #1a1a1a;
+  padding: 24px;
   overflow-y: auto;
   font-size: 13px;
   line-height: 1.6;
@@ -90,24 +161,29 @@ body {
 }
 
 .preview-panel .preview-title {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #3c3c3c;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .preview-panel .preview-url {
-  color: #569cd6;
-  font-size: 11px;
-  margin-bottom: 16px;
+  color: #4a9eff;
+  font-size: 12px;
+  margin-bottom: 20px;
   word-break: break-all;
+  line-height: 1.5;
 }
 
 .preview-panel .preview-content {
-  color: #858585;
-  font-size: 12px;
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.8;
 }
 
 #loading {
@@ -119,18 +195,18 @@ body {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: #1a1a1a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #424242;
-  border-radius: 0;
+  background: #444;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4e4e4e;
+  background: #555;
 }

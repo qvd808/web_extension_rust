@@ -66,11 +66,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           try {
             const tabs = await collect_tabs();
             initialize_tabs(tabs);
-            const result = fuzzy_search("tiny");
-            sendResponse(result);
+            sendResponse({ success: true });
           } catch (err) {
             console.error("Failed to get tabs:", err);
-            sendResponse([]);
+            sendResponse({ success: false });
           }
         })();
 
@@ -80,6 +79,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     }
 
     return true; // keep the channel open
+  }
+
+  if (msg.action === "fuzzySearch") {
+    try {
+      const results = fuzzy_search(msg.query);
+      sendResponse(results);
+    } catch (err) {
+      console.error("Fuzzy search failed:", err);
+      sendResponse([]);
+    }
+    return true;
   }
 
   return false;

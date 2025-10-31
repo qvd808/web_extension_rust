@@ -137,11 +137,12 @@ function injectIframe(url) {
   const iframe = document.createElement("iframe");
   iframe.src = url;
   Object.assign(iframe.style, {
-    width: "800px",
-    height: "400px",
+    width: "900px",
+    height: "500px",
     border: "none",
-    borderRadius: "0",
+    borderRadius: "8px",
     backgroundColor: "transparent",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
   });
 
   iframe.addEventListener("load", () => {
