@@ -72,6 +72,7 @@ if (!window.keybindListenerInstalled) {
             command: cmd.name,
           });
           console.log("Background response:", response);
+          injectIframe(chrome.runtime.getURL("js/search.html"));
         } catch (err) {
           console.error("Failed to send message to background:", err);
         }
@@ -112,4 +113,48 @@ if (!window.keybindListenerInstalled) {
       window.keybindListenerInstalled = false;
     }
   });
+}
+
+function injectIframe(url) {
+  if (document.getElementById("extension-iframe-overlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "extension-iframe-overlay";
+  Object.assign(overlay.style, {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "transparent",
+    zIndex: 999999,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backdropFilter: "blur(4px)",
+  });
+
+  const iframe = document.createElement("iframe");
+  iframe.src = url;
+  Object.assign(iframe.style, {
+    width: "800px",
+    height: "400px",
+    border: "none",
+    borderRadius: "0",
+    backgroundColor: "transparent",
+  });
+
+  iframe.addEventListener("load", () => {
+    // wait a tiny bit for iframe content to mount
+    setTimeout(() => {
+      iframe.contentWindow.postMessage({ action: "focusSearch" }, "*");
+    }, 100);
+  });
+
+  overlay.appendChild(iframe);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
 }

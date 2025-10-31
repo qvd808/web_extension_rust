@@ -1,0 +1,136 @@
+/* extension/js/search.css */
+body {
+  margin: 0;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  background-color: transparent;
+  color: #e0e0e0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.search-overlay {
+  width: 800px;
+  height: 400px;
+  background-color: #1e1e1e;
+  border: 1px solid #3c3c3c;
+  border-radius: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* Left panel - Search */
+.search-panel {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  background-color: #252526;
+  border-right: 1px solid #3c3c3c;
+}
+
+#search-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 14px;
+  border: none;
+  border-bottom: 1px solid #3c3c3c;
+  background-color: #1e1e1e;
+  color: #cccccc;
+  outline: none;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+}
+
+#search-input::placeholder {
+  color: #6a737d;
+}
+
+#search-input:focus {
+  background-color: #2d2d30;
+}
+
+#results-container {
+  flex: 1;
+  overflow-y: auto;
+  background-color: #252526;
+  padding: 0;
+}
+
+#results-container div {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #2d2d30;
+  font-size: 13px;
+  color: #cccccc;
+  transition: background-color 0.1s;
+}
+
+#results-container div:hover,
+#results-container div.selected {
+  background-color: #2a2d2e;
+}
+
+#results-container div.active {
+  background-color: #094771;
+  border-left: 2px solid #007acc;
+}
+
+/* Right panel - Preview */
+.preview-panel {
+  width: 60%;
+  background-color: #1e1e1e;
+  padding: 20px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d4d4d4;
+}
+
+.preview-panel .preview-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.preview-panel .preview-url {
+  color: #569cd6;
+  font-size: 11px;
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+
+.preview-panel .preview-content {
+  color: #858585;
+  font-size: 12px;
+}
+
+#loading {
+  text-align: center;
+  color: #858585;
+  padding: 20px;
+  font-size: 13px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
