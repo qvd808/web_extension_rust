@@ -105,19 +105,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 async function handleCommandTrigger(command, sendResponse) {
-  if (command !== "FuzzyFinder") {
-    console.log("Unknown command:", command);
-    sendResponse({ success: false });
-    return;
-  }
+  switch (command) {
+    case "FuzzyFinder":
+      try {
+        const tabs = await collect_tabs();
+        initialize_tabs(tabs);
+        sendResponse({ success: true });
+      } catch (err) {
+        console.error("Failed to get tabs:", err);
+        sendResponse({ success: false });
+      }
+      break;
 
-  try {
-    const tabs = await collect_tabs();
-    initialize_tabs(tabs);
-    sendResponse({ success: true });
-  } catch (err) {
-    console.error("Failed to get tabs:", err);
-    sendResponse({ success: false });
+    case "GetLink":
+      sendResponse({ success: true });
+      break;
+
+    default:
+      console.log("Unknown command:", command);
+      sendResponse({ success: false });
+      break;
   }
 }
 

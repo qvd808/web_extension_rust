@@ -1,21 +1,13 @@
+// ===== Configuration =====
 var KEYBIND_CONFIG = window.KEYBIND_CONFIG;
 var UI_CONFIG = window.UI_CONFIG;
 
-console.log("Keybind Config:", KEYBIND_CONFIG);
-console.log("UI Config:", UI_CONFIG);
-
+// ===== Keybind Listener Setup =====
 if (!window.keybindListenerInstalled) {
   window.keybindListenerInstalled = true;
 
-  console.log("content.js loaded");
-
-  // 1️⃣ Define your commands
-  const listOfCommands = [
-    { name: "FuzzyFinder", keybind: "ffq" },
-    // Add more commands here
-  ];
-
-  const commands = listOfCommands.map((cmd) => ({
+  // Parse commands into searchable format
+  const commands = KEYBIND_CONFIG.COMMANDS.map((cmd) => ({
     name: cmd.name,
     keys: cmd.keybind
       .replace(/<space>/gi, " ")
@@ -24,9 +16,8 @@ if (!window.keybindListenerInstalled) {
   }));
 
   const maxSequenceLength = Math.max(...commands.map((c) => c.keys.length));
-  const maxTime = 500; // ms between first and last key
 
-  // 2️⃣ Circular buffer
+  // ===== Circular Buffer =====
   const circularBuffer = new Array(maxSequenceLength);
   let pointer = 0;
   let bufferSize = 0;
@@ -37,7 +28,7 @@ if (!window.keybindListenerInstalled) {
     if (bufferSize < maxSequenceLength) bufferSize++;
   }
 
-  // 3️⃣ Wrap sendMessage in a promise to allow async/await
+  // ===== Chrome API Helpers =====
   function sendMessageAsync(message) {
     return new Promise((resolve, reject) => {
       // Can we wrap this in rust so we can make this api not depend non the browser
@@ -51,7 +42,7 @@ if (!window.keybindListenerInstalled) {
     });
   }
 
-  // 4️⃣ Process buffer in batch
+  // ===== Command Processing =====
   let batchScheduled = false;
 
   async function processCircularBuffer() {
@@ -71,14 +62,29 @@ if (!window.keybindListenerInstalled) {
           (pointer + bufferSize - cmd.keys.length) % maxSequenceLength
         ].timestamp;
 
-      if (keysOnly.every((k, i) => k === cmd.keys[i]) && timeDiff <= maxTime) {
+      if (
+        keysOnly.every((k, i) => k === cmd.keys[i]) &&
+        timeDiff <= KEYBIND_CONFIG.MAX_SEQUENCE_TIME
+      ) {
         try {
           const response = await sendMessageAsync({
             action: "commandTriggered",
             command: cmd.name,
           });
-          console.log("Background response:", response);
-          injectIframe(chrome.runtime.getURL("js/search.html"));
+
+          // Only inject iframe if background communication succeeded
+          if (response?.success) {
+            // Handle different commands
+            switch (cmd.name) {
+              case "FuzzyFinder":
+                injectIframe(chrome.runtime.getURL("js/search.html"));
+                break;
+              default:
+                console.log("Command executed:", cmd.name);
+            }
+          } else {
+            console.warn("Command failed - back ground send false:");
+          }
         } catch (err) {
           console.error("Failed to send message to background:", err);
         }
@@ -91,7 +97,7 @@ if (!window.keybindListenerInstalled) {
     batchScheduled = false;
   }
 
-  // 5️⃣ Keydown handler
+  // ===== Event Handlers =====
   function keydownHandler(e) {
     const key = e.key.toLowerCase();
 
@@ -108,6 +114,7 @@ if (!window.keybindListenerInstalled) {
     }
   }
 
+  // ===== Initialize Listeners =====
   document.addEventListener("keydown", keydownHandler);
 
   // Cleanup listener when tab becomes inactive
@@ -121,9 +128,12 @@ if (!window.keybindListenerInstalled) {
   });
 }
 
+// ===== Iframe Injection =====
 function injectIframe(url) {
+  // Prevent duplicate iframes
   if (document.getElementById("extension-iframe-overlay")) return;
 
+  // Create overlay backdrop
   const overlay = document.createElement("div");
   overlay.id = "extension-iframe-overlay";
   Object.assign(overlay.style, {
@@ -133,45 +143,46 @@ function injectIframe(url) {
     width: "100vw",
     height: "100vh",
     backgroundColor: "transparent",
-    zIndex: 999999,
+    zIndex: UI_CONFIG?.IFRAME?.Z_INDEX || 999999,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     backdropFilter: "blur(4px)",
   });
 
+  // Create iframe
   const iframe = document.createElement("iframe");
   iframe.src = url;
   Object.assign(iframe.style, {
-    width: "900px",
-    height: "500px",
+    width: UI_CONFIG?.IFRAME?.WIDTH || "900px",
+    height: UI_CONFIG?.IFRAME?.HEIGHT || "500px",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: UI_CONFIG?.IFRAME?.BORDER_RADIUS || "8px",
     backgroundColor: "transparent",
     boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
   });
 
+  // Focus search input after iframe loads
   iframe.addEventListener("load", () => {
-    // wait a tiny bit for iframe content to mount
     setTimeout(() => {
       iframe.contentWindow.postMessage({ action: "focusSearch" }, "*");
     }, 100);
   });
 
-  overlay.appendChild(iframe);
+  // Click outside to close
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) overlay.remove();
   });
 
+  overlay.appendChild(iframe);
   document.body.appendChild(overlay);
 }
 
-// Listen for messages from the iframe
+// ===== Message Handlers =====
+// Listen for close command from iframe
 window.addEventListener("message", (event) => {
-  if (event.data && event.data.action === "closeIframe") {
+  if (event.data?.action === "closeIframe") {
     const overlay = document.getElementById("extension-iframe-overlay");
-    if (overlay) {
-      overlay.remove();
-    }
+    overlay?.remove();
   }
 });

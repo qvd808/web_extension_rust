@@ -1,7 +1,13 @@
 // config/constants.js
 export const KEYBIND_CONFIG = {
   MAX_SEQUENCE_TIME: 500,
-  COMMANDS: [{ name: "FuzzyFinder", keybind: "ffq" }],
+  COMMANDS: [
+    { name: "FuzzyFinder", keybind: "ffq" },
+    {
+      name: "GetLink",
+      keybind: "ggl",
+    },
+  ],
 };
 
 export const UI_CONFIG = {
