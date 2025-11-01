@@ -159,3 +159,13 @@ function injectIframe(url) {
 
   document.body.appendChild(overlay);
 }
+
+// Listen for messages from the iframe
+window.addEventListener("message", (event) => {
+  if (event.data && event.data.action === "closeIframe") {
+    const overlay = document.getElementById("extension-iframe-overlay");
+    if (overlay) {
+      overlay.remove();
+    }
+  }
+});

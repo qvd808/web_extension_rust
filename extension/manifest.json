@@ -19,7 +19,8 @@
         "js/search.js",
         "js/search.css"
       ],
-      "matches": ["<all_urls>"]
+      "matches": ["<all_urls>"],
+      "exclude_matches": ["chrome://*/*", "brave://*/*", "edge://*/*"]
     }
   ],
   "content_security_policy": {
