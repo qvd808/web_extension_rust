@@ -2,9 +2,50 @@
 var KEYBIND_CONFIG = window.KEYBIND_CONFIG;
 var UI_CONFIG = window.UI_CONFIG;
 
+// ===== Mode Management =====
+// Use window property to persist across script re-injections
+if (typeof window.vimMode === "undefined") {
+  window.vimMode = "normal";
+}
+
+function setMode(mode) {
+  window.vimMode = mode;
+  updateModeIndicator();
+}
+
+function updateModeIndicator() {
+  let indicator = document.getElementById("vim-mode-indicator");
+  
+  if (!indicator) {
+    indicator = document.createElement("div");
+    indicator.id = "vim-mode-indicator";
+    document.body.appendChild(indicator);
+  }
+
+  indicator.textContent = window.vimMode.toUpperCase();
+  Object.assign(indicator.style, {
+    position: "fixed",
+    bottom: "20px",
+    right: "20px",
+    padding: "8px 16px",
+    backgroundColor: window.vimMode === "normal" ? "#4CAF50" : "#2196F3",
+    color: "white",
+    fontFamily: "monospace",
+    fontSize: "14px",
+    fontWeight: "bold",
+    borderRadius: "4px",
+    zIndex: 999998,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+    transition: "background-color 0.2s",
+  });
+}
+
 // ===== Keybind Listener Setup =====
 if (!window.keybindListenerInstalled) {
   window.keybindListenerInstalled = true;
+
+  // Initialize mode indicator
+  updateModeIndicator();
 
   // Parse commands into searchable format
   const commands = KEYBIND_CONFIG.COMMANDS.map((cmd) => ({
@@ -100,17 +141,56 @@ if (!window.keybindListenerInstalled) {
   // ===== Event Handlers =====
   function keydownHandler(e) {
     const key = e.key.toLowerCase();
+    const activeElement = document.activeElement;
+    const isInputField =
+      activeElement &&
+      (activeElement.tagName === "INPUT" ||
+        activeElement.tagName === "TEXTAREA" ||
+        activeElement.isContentEditable);
 
-    // Prevent default only if key is part of any command
-    // if (commands.some((cmd) => cmd.keys.includes(key))) {
-    //   e.preventDefault();
-    // }
+    // ESC to switch to normal mode from insert mode
+    if (key === "escape" && window.vimMode === "insert") {
+      e.preventDefault();
+      setMode("normal");
+      // Blur active element if in input field
+      if (isInputField) {
+        activeElement.blur();
+      }
+      return;
+    }
 
-    addKey(key);
+    // 'i' to enter insert mode from normal mode
+    if (key === "i" && window.vimMode === "normal" && !isInputField) {
+      e.preventDefault();
+      setMode("insert");
+      return;
+    }
 
-    if (!batchScheduled) {
-      batchScheduled = true;
-      requestAnimationFrame(processCircularBuffer);
+    // INSERT MODE: Allow normal typing, no command detection
+    if (window.vimMode === "insert") {
+      return; // Let browser handle all keys normally
+    }
+
+    // NORMAL MODE: Command detection and prevention
+    if (window.vimMode === "normal") {
+      // Prevent default behavior for command keys
+      if (commands.some((cmd) => cmd.keys.includes(key))) {
+        e.preventDefault();
+      }
+
+      // Prevent focusing input fields in normal mode
+      if (isInputField) {
+        e.preventDefault();
+        activeElement.blur();
+        return;
+      }
+
+      addKey(key);
+
+      if (!batchScheduled) {
+        batchScheduled = true;
+        requestAnimationFrame(processCircularBuffer);
+      }
     }
   }
 
@@ -118,11 +198,17 @@ if (!window.keybindListenerInstalled) {
   document.addEventListener("keydown", keydownHandler);
 
   // Cleanup listener when tab becomes inactive
-  // Can we wrap this in rust so we can make this api not depend non the browser
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === "cleanup") {
       console.log("Cleaning up key listener");
       document.removeEventListener("keydown", keydownHandler);
+      
+      // Remove mode indicator
+      const indicator = document.getElementById("vim-mode-indicator");
+      if (indicator) {
+        indicator.remove();
+      }
+      
       window.keybindListenerInstalled = false;
     }
   });
