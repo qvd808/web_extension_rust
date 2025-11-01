@@ -1,5 +1,14 @@
 #!/bin/bash
 
+MODE=${1:-prod}
+if [[ "$MODE" == "dev" ]]; then
+	echo "🔧 Build mode: DEV (no minify, console enabled)"
+	export BUILD_MODE=dev
+else
+	echo "🚀 Build mode: PROD (minified, console dropped)"
+	unset BUILD_MODE
+fi
+
 echo "🦀 Building Hello World Extension with Rust/WASM..."
 echo ""
 
@@ -18,7 +27,12 @@ rm -f extension/js/wasm/README.md
 
 echo ""
 echo "Step 3: Building content script with esbuild..."
-npm run build:content
+# Pass through mode to node via env (build-content.js also reads CLI args)
+if [[ "$MODE" == "dev" ]]; then
+	npm run build:content -- dev
+else
+	npm run build:content
+fi
 
 echo ""
 echo "✅ Build complete!"

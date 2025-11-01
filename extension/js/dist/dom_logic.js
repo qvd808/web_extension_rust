@@ -1,20 +1,4 @@
-// extension/js/src/dom_logic.js
-var inited = false;
-var host;
-var shadow;
-var badgeEl;
-var panelEl;
-function initOnce() {
-  if (inited) return;
-  inited = true;
-  host = document.createElement("div");
-  host.style.all = "initial";
-  host.style.position = "fixed";
-  host.style.zIndex = "2147483647";
-  host.style.inset = "auto 16px 16px auto";
-  shadow = host.attachShadow({ mode: "open" });
-  const style = document.createElement("style");
-  style.textContent = `
+var l=!1,t,a,n,o;function i(){if(l)return;l=!0,t=document.createElement("div"),t.style.all="initial",t.style.position="fixed",t.style.zIndex="2147483647",t.style.inset="auto 16px 16px auto",a=t.attachShadow({mode:"open"});let e=document.createElement("style");e.textContent=`
     :host { all: initial; }
     .badge {
       font: 12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -36,50 +20,8 @@ function initOnce() {
     .panel h4 { margin: 0 0 8px 0; color: #fff; font-weight: 600; }
     .panel p { margin: 0; line-height: 1.4; }
     .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:#2a2a2a; padding:2px 6px; border-radius:6px; }
-  `;
-  badgeEl = document.createElement("div");
-  badgeEl.className = "badge";
-  badgeEl.textContent = "Ready";
-  panelEl = document.createElement("div");
-  panelEl.className = "panel";
-  panelEl.innerHTML = `
+  `,n=document.createElement("div"),n.className="badge",n.textContent="Ready",o=document.createElement("div"),o.className="panel",o.innerHTML=`
     <h4>Demo Panel</h4>
     <p>Press <span class="kbd">Ctrl</span> + <span class="kbd">K</span> to toggle this panel.</p>
     <p>Last key: <span id="last-key">\u2014</span></p>
-  `;
-  shadow.append(style, badgeEl, panelEl);
-  document.documentElement.appendChild(host);
-}
-function onKeydown(e) {
-  if (badgeEl) badgeEl.textContent = `Key: ${e.key}`;
-  const lastKey = shadow?.getElementById?.("last-key");
-  if (lastKey) lastKey.textContent = `${e.ctrlKey ? "Ctrl+" : ""}${e.key}`;
-  if (e.ctrlKey && e.key.toLowerCase() === "k") {
-    e.preventDefault();
-    togglePanel();
-  }
-}
-function togglePanel() {
-  if (!panelEl) return;
-  const nowVisible = panelEl.style.display !== "block";
-  panelEl.style.display = nowVisible ? "block" : "none";
-  if (nowVisible) {
-    if (badgeEl) badgeEl.textContent = "Panel open";
-  }
-}
-function cleanup() {
-  try {
-    host?.remove();
-  } finally {
-    inited = false;
-    host = null;
-    shadow = null;
-    badgeEl = null;
-    panelEl = null;
-  }
-}
-export {
-  cleanup,
-  initOnce,
-  onKeydown
-};
+  `,a.append(e,n,o),document.documentElement.appendChild(t)}function d(e){n&&(n.textContent=`Key: ${e.key}`);let s=a?.getElementById?.("last-key");s&&(s.textContent=`${e.ctrlKey?"Ctrl+":""}${e.key}`),e.ctrlKey&&e.key.toLowerCase()==="k"&&(e.preventDefault(),p())}function p(){if(!o)return;let e=o.style.display!=="block";o.style.display=e?"block":"none",e&&n&&(n.textContent="Panel open")}function r(){try{t?.remove()}finally{l=!1,t=null,a=null,n=null,o=null}}export{r as cleanup,i as initOnce,d as onKeydown};

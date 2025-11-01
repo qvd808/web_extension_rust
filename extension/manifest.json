@@ -18,7 +18,8 @@
         "js/search.html",
         "js/search.js",
         "js/search.css",
-        "js/dist/dom_logic.js"
+        "js/dist/dom_logic.js",
+        "js/dist/vim_display.js"
       ],
       "matches": ["<all_urls>"],
       "exclude_matches": ["chrome://*/*", "brave://*/*", "edge://*/*"]

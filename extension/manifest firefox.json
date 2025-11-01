@@ -14,7 +14,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["js/wasm/*.wasm"],
+      "resources": [
+        "js/wasm/*.wasm",
+        "js/dist/vim_display.js",
+        "js/dist/dom_logic.js"
+      ],
       "matches": ["<all_urls>"]
     }
   ]
