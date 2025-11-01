@@ -87,6 +87,24 @@ const VIM_COMMANDS = {
       },
     },
     {
+      key: ["C-j", "j"],
+      mode: "normal",
+      description: "Demo: Ctrl+J then j",
+      handler: () => {
+        console.log("Execute Ctrl + j, then j");
+        return true;
+      },
+    },
+    {
+      key: ["C-j", "k"],
+      mode: "normal",
+      description: "Demo: Ctrl+J then Ctrl+K",
+      handler: () => {
+        console.log("Execute Ctrl + j, then k");
+        return true;
+      },
+    },
+    {
       key: "C-d",
       mode: "normal",
       description: "Page down",
@@ -139,12 +157,73 @@ const VIM_COMMANDS = {
   ],
 };
 
-const circularBuffer = new Array(10);
-
-let prevPointer = 0;
-let pointer = 0;
+// Sequence matching state (prefix trie based)
+// Use a tiny ring buffer to avoid allocations and shifts.
+let RB_CAP = 2; // will be set from MAX_SEQ_LEN after trie build
+let rb = new Array(2);
+let rbStart = 0; // index of oldest
+let rbSize = 0;  // number of valid tokens
 let timeoutId = null;
 const TIMEOUT = 500;
+// Pending exact when also a prefix (e.g., supports longer mapping like "C-j j")
+let pendingExact = null; // function | null
+let pendingTimerId = null;
+
+// Build a tiny prefix trie for fast matching
+function commandKeyToTokens(key) {
+  // Allow array form directly, e.g., ["C-j", "j"]
+  if (Array.isArray(key)) return key.slice();
+  const keyStr = String(key);
+  // Space-delimited tokens, e.g., "C-j j" => ["C-j","j"]
+  if (keyStr.includes(" ")) return keyStr.trim().split(/\s+/);
+
+  // Hyphen handling: treat leading modifiers (C, S) as part of first token only.
+  // Example: "C-j-j" => ["C-j", "j"] ; "C-S-j-g" => ["C-S-j", "g"]
+  if (keyStr.includes("-")) {
+    const segs = keyStr.split("-");
+    let i = 0;
+    const mods = [];
+    while (i < segs.length && (segs[i] === "C" || segs[i] === "S")) {
+      mods.push(segs[i]);
+      i++;
+    }
+    if (i < segs.length) {
+      const base = segs[i++];
+      const first = (mods.length ? mods.join("-") + "-" : "") + base;
+      const rest = segs.slice(i);
+      return [first, ...rest];
+    }
+    return [keyStr];
+  }
+
+  // Fallback: split into individual characters (e.g., "gg" => ["g","g"]).
+  return keyStr.split("");
+}
+
+function buildCommandTrie(commands) {
+  const root = { children: new Map(), handler: null };
+  let maxLen = 1;
+  for (const cmd of commands) {
+    const tokens = commandKeyToTokens(cmd.key);
+    maxLen = Math.max(maxLen, tokens.length);
+    let node = root;
+    for (const t of tokens) {
+      if (!node.children.has(t))
+        node.children.set(t, { children: new Map(), handler: null });
+      node = node.children.get(t);
+    }
+    // Last token: store handler
+    node.handler = cmd.handler;
+  }
+  return { root, maxLen };
+}
+
+const { root: COMMAND_TRIE, maxLen: MAX_SEQ_LEN } = buildCommandTrie(
+  VIM_COMMANDS.immediate,
+);
+// Initialize ring buffer capacity from computed max length (min 1)
+RB_CAP = Math.max(1, MAX_SEQ_LEN);
+rb = new Array(RB_CAP);
 
 // ============ PRIVATE function ===============
 
@@ -158,8 +237,9 @@ export function isInputField(element) {
 }
 
 // Normalize a key event into a token that includes Ctrl/Shift when present.
+// Caller pre-computes whether this is the first token in the sequence for perf.
 // Examples: "j", "C-j", "S-j", "C-S-j", "S-ArrowDown"
-function normalizeKeyToken(e) {
+function normalizeKeyToken(e, isFirst) {
   const k = e.key;
 
   // Ignore standalone modifier keys
@@ -170,65 +250,155 @@ function normalizeKeyToken(e) {
   // Base key (lowercased for letters to keep tokens consistent)
   let base = k.length === 1 ? k.toLowerCase() : k;
 
+  // Fast path: non-first tokens ignore modifiers (keeps sequences smooth)
+  if (!isFirst) return base;
+
+  // Only encode modifiers on the FIRST token of a sequence
   const mods = [];
   if (e.ctrlKey) mods.push("C");
   if (e.shiftKey) mods.push("S");
+  return mods.length ? mods.join("-") + "-" + base : base;
+}
 
-  const prefix = mods.length ? mods.join("-") + "-" : "";
-  return prefix + base;
+// Helper: ring buffer operations
+function rbClear() {
+  rbStart = 0; rbSize = 0;
+}
+function rbPush(token) {
+  if (rbSize < RB_CAP) {
+    rb[(rbStart + rbSize) % RB_CAP] = token;
+    rbSize++;
+  } else {
+    // overwrite oldest
+    rb[rbStart] = token;
+    rbStart = (rbStart + 1) % RB_CAP;
+  }
+}
+function rbSetLatest(token) {
+  rbStart = 0; rbSize = 1; rb[0] = token;
+}
+
+// Attempt to match tokens currently in ring buffer
+function attemptMatchFromRing() {
+  let node = COMMAND_TRIE;
+  let lastExact = null;
+  for (let i = 0; i < rbSize; i++) {
+    const t = rb[(rbStart + i) % RB_CAP];
+    const next = node.children.get(t);
+    if (!next) {
+      return { type: "none", lastExact };
+    }
+    node = next;
+    if (node.handler) lastExact = { handler: node.handler, depth: i + 1 };
+  }
+  if (node.handler) return { type: "exact", handler: node.handler, hasChildren: node.children.size > 0 };
+  if (node.children.size > 0) return { type: "prefix", lastExact };
+  return { type: "none", lastExact };
 }
 
 // Returns true if the key was handled (exact or prefix match), false otherwise
 const normalModeHandler = (e) => {
-  const token = normalizeKeyToken(e);
+  // Pre-compute "is first token" so normalizer can take the fast path
+  const token = normalizeKeyToken(e, rbSize === 0);
   if (!token) return false; // ignored (pure modifier)
 
-  circularBuffer[pointer] = token;
-  pointer = (pointer + 1) % circularBuffer.length;
+  // Append token (ring buffer)
+  rbPush(token);
 
-  // Build the current key sequence
-  let keys = "";
-  let i = prevPointer;
-  while (i !== pointer) {
-    keys += circularBuffer[i];
-    i = (i + 1) % circularBuffer.length;
-  }
+  // Try to match the current buffer
+  let result = attemptMatchFromRing();
 
-  // Find matching commands
-  const matches = VIM_COMMANDS.immediate.filter((cmd) =>
-    cmd.key.startsWith(keys),
-  );
-
-  if (matches.length === 0) {
-    // No match, reset
-    prevPointer = pointer;
+  if (result.type === "exact") {
     if (timeoutId) {
       clearTimeout(timeoutId);
       timeoutId = null;
     }
-    return false;
-  }
-
-  if (matches.length === 1 && matches[0].key === keys) {
-    // Exact match, execute immediately
-    prevPointer = pointer;
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
+    // If this exact also has children, delay execution to allow a longer mapping
+    if (result.hasChildren) {
+      // Set pending exact; wait for next token within TIMEOUT
+      pendingExact = result.handler;
+      if (pendingTimerId) clearTimeout(pendingTimerId);
+      pendingTimerId = setTimeout(() => {
+        try { pendingExact && pendingExact(); } catch (_) {}
+        pendingExact = null;
+        pendingTimerId = null;
+        rbClear();
+      }, TIMEOUT);
+      return true;
     }
-    matches[0].handler(e);
+    // No children: execute immediately
+    if (pendingTimerId) { clearTimeout(pendingTimerId); pendingTimerId = null; }
+    pendingExact = null;
+    result.handler(e);
+    rbClear();
     return true;
-  } else {
-    // Multiple matches: wait for timeout
+  }
+
+  if (result.type === "prefix") {
+    // Wait for the rest of the sequence; if a shorter exact exists, execute it on timeout
     if (timeoutId) clearTimeout(timeoutId);
+    const lastExact = result.lastExact; // may be null
     timeoutId = setTimeout(() => {
-      const exactMatch = matches.find((m) => m.key === keys);
-      if (exactMatch) exactMatch.handler();
-      prevPointer = pointer;
+      if (lastExact?.handler) {
+        try {
+          lastExact.handler();
+        } catch (_) {}
+      }
+      rbClear();
       timeoutId = null;
     }, TIMEOUT);
     return true;
   }
+
+  // No match with current buffer; try with only the latest token
+  // If we had a pending exact waiting for continuation, flush it immediately on divergence
+  if (pendingExact) {
+    if (pendingTimerId) { clearTimeout(pendingTimerId); pendingTimerId = null; }
+    try { pendingExact(); } catch (_) {}
+    pendingExact = null;
+  }
+
+  rbSetLatest(token);
+  result = attemptMatchFromRing();
+  if (result.type === "exact") {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    // If this exact also has children, set pending instead of immediate exec
+    if (result.hasChildren) {
+      pendingExact = result.handler;
+      if (pendingTimerId) clearTimeout(pendingTimerId);
+      pendingTimerId = setTimeout(() => {
+        try { pendingExact && pendingExact(); } catch (_) {}
+        pendingExact = null;
+        pendingTimerId = null;
+        rbClear();
+      }, TIMEOUT);
+      return true;
+    }
+    if (pendingTimerId) { clearTimeout(pendingTimerId); pendingTimerId = null; }
+    pendingExact = null;
+    result.handler(e);
+    rbClear();
+    return true;
+  }
+  if (result.type === "prefix") {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      rbClear();
+      timeoutId = null;
+    }, TIMEOUT);
+    return true;
+  }
+
+  // Still no match
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+    timeoutId = null;
+  }
+  rbClear();
+  return false;
 };
 
 const insertModeHandler = (e) => {
