@@ -17,7 +17,8 @@
         "js/wasm/*.wasm",
         "js/search.html",
         "js/search.js",
-        "js/search.css"
+        "js/search.css",
+        "js/dist/dom_logic.js"
       ],
       "matches": ["<all_urls>"],
       "exclude_matches": ["chrome://*/*", "brave://*/*", "edge://*/*"]

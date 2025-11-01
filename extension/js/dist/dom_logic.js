@@ -1,24 +1,18 @@
-// Minimal UI: a small badge and a toggleable panel. Toggle with Ctrl+K.
-
-let inited = false;
-let host;         // <div> host attached to DOM
-let shadow;       // ShadowRoot
-let badgeEl;      // small status badge
-let panelEl;      // toggleable panel
-
-export function initOnce() {
+// extension/js/src/dom_logic.js
+var inited = false;
+var host;
+var shadow;
+var badgeEl;
+var panelEl;
+function initOnce() {
   if (inited) return;
   inited = true;
-
-  // Host that isolates UI
   host = document.createElement("div");
   host.style.all = "initial";
   host.style.position = "fixed";
   host.style.zIndex = "2147483647";
   host.style.inset = "auto 16px 16px auto";
-
   shadow = host.attachShadow({ mode: "open" });
-
   const style = document.createElement("style");
   style.textContent = `
     :host { all: initial; }
@@ -43,47 +37,37 @@ export function initOnce() {
     .panel p { margin: 0; line-height: 1.4; }
     .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:#2a2a2a; padding:2px 6px; border-radius:6px; }
   `;
-
   badgeEl = document.createElement("div");
   badgeEl.className = "badge";
   badgeEl.textContent = "Ready";
-
   panelEl = document.createElement("div");
   panelEl.className = "panel";
   panelEl.innerHTML = `
     <h4>Demo Panel</h4>
     <p>Press <span class="kbd">Ctrl</span> + <span class="kbd">K</span> to toggle this panel.</p>
-    <p>Last key: <span id="last-key">—</span></p>
+    <p>Last key: <span id="last-key">\u2014</span></p>
   `;
-
   shadow.append(style, badgeEl, panelEl);
   document.documentElement.appendChild(host);
 }
-
-export function onKeydown(e) {
-  // Show last key in badge/panel
+function onKeydown(e) {
   if (badgeEl) badgeEl.textContent = `Key: ${e.key}`;
   const lastKey = shadow?.getElementById?.("last-key");
   if (lastKey) lastKey.textContent = `${e.ctrlKey ? "Ctrl+" : ""}${e.key}`;
-
-  // Toggle panel on Ctrl+K
   if (e.ctrlKey && e.key.toLowerCase() === "k") {
     e.preventDefault();
     togglePanel();
   }
 }
-
 function togglePanel() {
   if (!panelEl) return;
   const nowVisible = panelEl.style.display !== "block";
   panelEl.style.display = nowVisible ? "block" : "none";
   if (nowVisible) {
-    // Nudge badge text when opening
     if (badgeEl) badgeEl.textContent = "Panel open";
   }
 }
-
-export function cleanup() {
+function cleanup() {
   try {
     host?.remove();
   } finally {
@@ -94,3 +78,8 @@ export function cleanup() {
     panelEl = null;
   }
 }
+export {
+  cleanup,
+  initOnce,
+  onKeydown
+};
