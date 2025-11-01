@@ -81,7 +81,7 @@ const VIM_COMMANDS = {
       key: "C-j",
       mode: "normal",
       description: "Ctrl+J example",
-      handler: () => {
+      handler: (_evt) => {
         console.log("Execute Ctrl + j");
         return true;
       },
@@ -90,7 +90,7 @@ const VIM_COMMANDS = {
       key: ["C-j", "j"],
       mode: "normal",
       description: "Demo: Ctrl+J then j",
-      handler: () => {
+      handler: (_evt) => {
         console.log("Execute Ctrl + j, then j");
         return true;
       },
@@ -175,6 +175,47 @@ const TIMEOUT = 500;
 let seqTimerId = null; // number | null
 let seqState = SEQUENCE_STATE.IDLE; // see SEQUENCE_STATE
 let seqHandler = null; // function | null (lastExact for prefix, exact for pendingExact)
+
+// Sequence state machine helpers
+// See README.md for the Mermaid diagram of these states and transitions.
+function clearSeqTimer() {
+  if (seqTimerId) {
+    clearTimeout(seqTimerId);
+    seqTimerId = null;
+  }
+}
+
+function resetSeqState() {
+  seqState = SEQUENCE_STATE.IDLE;
+  seqHandler = null;
+}
+
+// Start a unified timeout window for either PREFIX or PENDING_EXACT
+// If a handler is provided, it will run on timeout (e.g., lastExact for PREFIX, exact for PENDING_EXACT)
+function startSequenceWait(state, handler) {
+  clearSeqTimer();
+  seqState = state;
+  seqHandler = handler || null;
+  seqTimerId = setTimeout(() => {
+    // Only fire if we're still in the same state (no interference from new keys)
+    if (seqState === state && seqHandler) {
+      try { seqHandler(); } catch (_) {}
+    }
+    rbClear();
+    resetSeqState();
+    clearSeqTimer();
+  }, TIMEOUT);
+}
+
+// If we were deferring an exact (PENDING_EXACT), flush it immediately (on divergence)
+function flushPendingIfAny() {
+  if (seqState === SEQUENCE_STATE.PENDING_EXACT && seqHandler) {
+    const handler = seqHandler;
+    clearSeqTimer();
+    resetSeqState();
+    try { handler(); } catch (_) {}
+  }
+}
 
 // Build a tiny prefix trie for fast matching
 function commandKeyToTokens(key) {
@@ -315,105 +356,60 @@ const normalModeHandler = (e) => {
   // Try to match the current buffer
   let result = attemptMatchFromRing();
 
-  if (result.type === "exact") {
-    // Clear any existing sequence timer
-  if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
-  seqState = SEQUENCE_STATE.IDLE;
-    seqHandler = null;
-
-    // If this exact also has children, delay execution to allow longer mapping
-    if (result.hasChildren) {
-      seqState = SEQUENCE_STATE.PENDING_EXACT;
-      seqHandler = result.handler;
-      seqTimerId = setTimeout(() => {
-        if (seqState === SEQUENCE_STATE.PENDING_EXACT && seqHandler) {
-          try { seqHandler(); } catch (_) {}
-        }
-        rbClear();
-        seqState = SEQUENCE_STATE.IDLE;
-        seqHandler = null;
-        seqTimerId = null;
-      }, TIMEOUT);
+  switch (result.type) {
+    case "exact": {
+      // Clear any existing sequence timer and reset state
+      clearSeqTimer();
+      resetSeqState();
+      if (result.hasChildren) {
+        startSequenceWait(SEQUENCE_STATE.PENDING_EXACT, result.handler);
+        return true;
+      }
+      try { result.handler(e); } catch (_) {}
+      rbClear();
       return true;
     }
-    // No children: execute immediately
-    try { result.handler(e); } catch (_) {}
-    rbClear();
-    return true;
-  }
-
-  if (result.type === "prefix") {
-    // Wait for more tokens; remember lastExact (if any) to run on timeout
-    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
-    const lastExact = result.lastExact; // may be null
-    seqState = SEQUENCE_STATE.PREFIX;
-    seqHandler = lastExact?.handler || null;
-    seqTimerId = setTimeout(() => {
-      if (seqState === SEQUENCE_STATE.PREFIX && seqHandler) {
-        try { seqHandler(); } catch (_) {}
-      }
-      rbClear();
-      seqState = SEQUENCE_STATE.IDLE;
-      seqHandler = null;
-      seqTimerId = null;
-    }, TIMEOUT);
-    return true;
+    case "prefix": {
+      const lastExact = result.lastExact; // may be null
+      startSequenceWait(SEQUENCE_STATE.PREFIX, lastExact?.handler || null);
+      return true;
+    }
+    case "none":
+    default:
+      // fall through to divergence handling
+      break;
   }
 
   // No match with current buffer; try with only the latest token
   // If we had a pending exact waiting for continuation, flush it immediately on divergence
-  if (seqState === SEQUENCE_STATE.PENDING_EXACT && seqHandler) {
-    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
-    try { seqHandler(); } catch (_) {}
-    seqState = SEQUENCE_STATE.IDLE;
-    seqHandler = null;
-  }
+  flushPendingIfAny();
 
   rbSetLatest(token);
   result = attemptMatchFromRing();
-  if (result.type === "exact") {
-    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
-    seqState = SEQUENCE_STATE.IDLE;
-    seqHandler = null;
-    // If this exact also has children, delay execution
-    if (result.hasChildren) {
-      seqState = SEQUENCE_STATE.PENDING_EXACT;
-      seqHandler = result.handler;
-      seqTimerId = setTimeout(() => {
-        if (seqState === SEQUENCE_STATE.PENDING_EXACT && seqHandler) {
-          try { seqHandler(); } catch (_) {}
-        }
-        rbClear();
-        seqState = SEQUENCE_STATE.IDLE;
-        seqHandler = null;
-        seqTimerId = null;
-      }, TIMEOUT);
+  switch (result.type) {
+    case "exact": {
+      clearSeqTimer();
+      resetSeqState();
+      if (result.hasChildren) {
+        startSequenceWait(SEQUENCE_STATE.PENDING_EXACT, result.handler);
+        return true;
+      }
+      try { result.handler(e); } catch (_) {}
+      rbClear();
       return true;
     }
-    try { result.handler(e); } catch (_) {}
-    rbClear();
-    return true;
-  }
-  if (result.type === "prefix") {
-    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
-    seqState = SEQUENCE_STATE.PREFIX;
-    seqHandler = null; // no shorter exact known here
-    seqTimerId = setTimeout(() => {
-      if (seqState === SEQUENCE_STATE.PREFIX && seqHandler) {
-        try { seqHandler(); } catch (_) {}
-      }
-      rbClear();
-      seqState = SEQUENCE_STATE.IDLE;
-      seqHandler = null;
-      seqTimerId = null;
-    }, TIMEOUT);
-    return true;
+    case "prefix": {
+      startSequenceWait(SEQUENCE_STATE.PREFIX, null); // no shorter exact known here
+      return true;
+    }
+    case "none":
+    default:
+      break;
   }
 
   // Still no match
-  if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
-  seqState = SEQUENCE_STATE.IDLE;
-  seqHandler = null;
+  clearSeqTimer();
+  resetSeqState();
   rbClear();
   return false;
 };
@@ -450,6 +446,7 @@ export const handleClick = (e) => {
       if (isInputField(target)) {
         currentVimMode = VIM_MODES.INSERT;
       }
+      break;
     }
     case VIM_MODES.INSERT:
       break;
