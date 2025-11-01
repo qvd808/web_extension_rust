@@ -138,6 +138,46 @@ if (!window.keybindListenerInstalled) {
     batchScheduled = false;
   }
 
+  // ===== Click Handler for Normal Mode =====
+  function clickHandler(e) {
+    if (window.vimMode === "normal") {
+      const target = e.target;
+      const isInputField =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+
+      if (isInputField) {
+        // Click on input field in normal mode -> switch to insert mode
+        // Don't prevent default - let the focus happen naturally
+        setMode("insert");
+        // Input will be focused by the browser automatically
+      } else {
+        // Click on non-input element -> just highlight it
+        e.preventDefault();
+        // Remove previous highlights
+        document.querySelectorAll(".vim-mode-highlight").forEach((el) => {
+          el.classList.remove("vim-mode-highlight");
+        });
+        // Add highlight to clicked element
+        target.classList.add("vim-mode-highlight");
+      }
+    }
+  }
+
+  // Add highlight styles
+  if (!document.getElementById("vim-mode-styles")) {
+    const style = document.createElement("style");
+    style.id = "vim-mode-styles";
+    style.textContent = `
+      .vim-mode-highlight {
+        outline: 2px solid #4CAF50 !important;
+        outline-offset: 2px !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // ===== Event Handlers =====
   function keydownHandler(e) {
     const key = e.key.toLowerCase();
@@ -151,6 +191,8 @@ if (!window.keybindListenerInstalled) {
     // ESC to switch to normal mode from insert mode
     if (key === "escape" && window.vimMode === "insert") {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       setMode("normal");
       // Blur active element if in input field
       if (isInputField) {
@@ -162,6 +204,8 @@ if (!window.keybindListenerInstalled) {
     // 'i' to enter insert mode from normal mode
     if (key === "i" && window.vimMode === "normal" && !isInputField) {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       setMode("insert");
       return;
     }
@@ -173,16 +217,22 @@ if (!window.keybindListenerInstalled) {
 
     // NORMAL MODE: Command detection and prevention
     if (window.vimMode === "normal") {
-      // Prevent default behavior for command keys
-      if (commands.some((cmd) => cmd.keys.includes(key))) {
-        e.preventDefault();
-      }
-
-      // Prevent focusing input fields in normal mode
+      // Prevent focusing input fields in normal mode (keyboard navigation)
       if (isInputField) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         activeElement.blur();
         return;
+      }
+
+      // Prevent ALL printable character input in normal mode
+      // Stop propagation to prevent page's handlers from running
+      const isPrintableKey = key.length === 1 || key === "space";
+      if (isPrintableKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
       }
 
       addKey(key);
@@ -195,19 +245,33 @@ if (!window.keybindListenerInstalled) {
   }
 
   // ===== Initialize Listeners =====
-  document.addEventListener("keydown", keydownHandler);
+  // Use capture phase to run before page's handlers
+  document.addEventListener("keydown", keydownHandler, true);
+  document.addEventListener("click", clickHandler, true); // Use capture phase
 
   // Cleanup listener when tab becomes inactive
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.action === "cleanup") {
       console.log("Cleaning up key listener");
-      document.removeEventListener("keydown", keydownHandler);
+      document.removeEventListener("keydown", keydownHandler, true);
+      document.removeEventListener("click", clickHandler, true);
       
       // Remove mode indicator
       const indicator = document.getElementById("vim-mode-indicator");
       if (indicator) {
         indicator.remove();
       }
+
+      // Remove highlight styles
+      const styles = document.getElementById("vim-mode-styles");
+      if (styles) {
+        styles.remove();
+      }
+
+      // Remove all highlights
+      document.querySelectorAll(".vim-mode-highlight").forEach((el) => {
+        el.classList.remove("vim-mode-highlight");
+      });
       
       window.keybindListenerInstalled = false;
     }
