@@ -1,7 +1,40 @@
+// ===== Command Configuration =====
+const VIM_COMMANDS = {
+  immediate: [
+    {
+      key: 'i',
+      mode: 'normal',
+      description: 'Enter insert mode',
+      handler: (e, context) => {
+        if (context.isInput) return false;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        context.setMode('insert');
+        return true;
+      }
+    },
+    {
+      key: 'escape',
+      mode: 'insert',
+      description: 'Exit insert mode',
+      handler: (e, context) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        context.setMode('normal');
+        if (context.isInput && context.activeElement) {
+          context.activeElement.blur();
+        }
+        return true;
+      }
+    }
+  ]
+};
+
 // ===== Vim Mode Functions =====
 export function initVimMode() {
   console.log("initVimMode called");
-  // Use window property to persist across script re-injections
   if (typeof window.vimMode === "undefined") {
     window.vimMode = "normal";
   }
@@ -24,7 +57,6 @@ function updateModeIndicator() {
     console.log("Creating new vim mode indicator");
     indicator = document.createElement("div");
     indicator.id = "vim-mode-indicator";
-    // Ensure body exists before appending
     if (document.body) {
       document.body.appendChild(indicator);
       console.log("Indicator appended to body");
@@ -81,18 +113,12 @@ export function createVimClickHandler() {
       const target = e.target;
 
       if (isInputField(target)) {
-        // Click on input field in normal mode -> switch to insert mode
-        // Don't prevent default - let the focus happen naturally
         setMode("insert");
-        // Input will be focused by the browser automatically
       } else {
-        // Click on non-input element -> just highlight it
         e.preventDefault();
-        // Remove previous highlights
         document.querySelectorAll(".vim-mode-highlight").forEach((el) => {
           el.classList.remove("vim-mode-highlight");
         });
-        // Add highlight to clicked element
         target.classList.add("vim-mode-highlight");
       }
     }
@@ -105,31 +131,24 @@ export function createVimKeydownHandler(addKey, processBuffer) {
     const activeElement = document.activeElement;
     const isInput = isInputField(activeElement);
 
-    // ESC to switch to normal mode from insert mode
-    if (key === "escape" && window.vimMode === "insert") {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      setMode("normal");
-      // Blur active element if in input field
-      if (isInput) {
-        activeElement.blur();
-      }
-      return;
-    }
+    // Build context object for command handlers
+    const handlerContext = {
+      isInput,
+      activeElement,
+      setMode: (mode) => setMode(mode)
+    };
 
-    // 'i' to enter insert mode from normal mode
-    if (key === "i" && window.vimMode === "normal" && !isInput) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      setMode("insert");
-      return;
+    // Check immediate commands (i and escape)
+    for (const cmd of VIM_COMMANDS.immediate) {
+      if (cmd.key === key && window.vimMode === cmd.mode) {
+        const handled = cmd.handler(e, handlerContext);
+        if (handled) return; // Command handled, stop processing
+      }
     }
 
     // INSERT MODE: Allow normal typing, no command detection
     if (window.vimMode === "insert") {
-      return; // Let browser handle all keys normally
+      return;
     }
 
     // NORMAL MODE: Command detection and prevention
@@ -144,7 +163,6 @@ export function createVimKeydownHandler(addKey, processBuffer) {
       }
 
       // Prevent ALL printable character input in normal mode
-      // Stop propagation to prevent page's handlers from running
       const isPrintableKey = key.length === 1 || key === "space";
       if (isPrintableKey) {
         e.preventDefault();
@@ -159,19 +177,16 @@ export function createVimKeydownHandler(addKey, processBuffer) {
 }
 
 export function cleanupVimMode() {
-  // Remove mode indicator
   const indicator = document.getElementById("vim-mode-indicator");
   if (indicator) {
     indicator.remove();
   }
 
-  // Remove highlight styles
   const styles = document.getElementById("vim-mode-styles");
   if (styles) {
     styles.remove();
   }
 
-  // Remove all highlights
   document.querySelectorAll(".vim-mode-highlight").forEach((el) => {
     el.classList.remove("vim-mode-highlight");
   });
