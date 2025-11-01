@@ -157,17 +157,24 @@ const VIM_COMMANDS = {
   ],
 };
 
+// Sequence state enum for maintainability
+const SEQUENCE_STATE = {
+  IDLE: "idle",
+  PREFIX: "prefix",
+  PENDING_EXACT: "pendingExact",
+};
+
 // Sequence matching state (prefix trie based)
 // Use a tiny ring buffer to avoid allocations and shifts.
 let RB_CAP = 2; // will be set from MAX_SEQ_LEN after trie build
 let rb = new Array(2);
 let rbStart = 0; // index of oldest
 let rbSize = 0;  // number of valid tokens
-let timeoutId = null;
 const TIMEOUT = 500;
-// Pending exact when also a prefix (e.g., supports longer mapping like "C-j j")
-let pendingExact = null; // function | null
-let pendingTimerId = null;
+// Single sequence timer/state (unifies prefix and pending-exact timers)
+let seqTimerId = null; // number | null
+let seqState = SEQUENCE_STATE.IDLE; // see SEQUENCE_STATE
+let seqHandler = null; // function | null (lastExact for prefix, exact for pendingExact)
 
 // Build a tiny prefix trie for fast matching
 function commandKeyToTokens(key) {
@@ -309,94 +316,104 @@ const normalModeHandler = (e) => {
   let result = attemptMatchFromRing();
 
   if (result.type === "exact") {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-    }
-    // If this exact also has children, delay execution to allow a longer mapping
+    // Clear any existing sequence timer
+  if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
+  seqState = SEQUENCE_STATE.IDLE;
+    seqHandler = null;
+
+    // If this exact also has children, delay execution to allow longer mapping
     if (result.hasChildren) {
-      // Set pending exact; wait for next token within TIMEOUT
-      pendingExact = result.handler;
-      if (pendingTimerId) clearTimeout(pendingTimerId);
-      pendingTimerId = setTimeout(() => {
-        try { pendingExact && pendingExact(); } catch (_) {}
-        pendingExact = null;
-        pendingTimerId = null;
+      seqState = SEQUENCE_STATE.PENDING_EXACT;
+      seqHandler = result.handler;
+      seqTimerId = setTimeout(() => {
+        if (seqState === SEQUENCE_STATE.PENDING_EXACT && seqHandler) {
+          try { seqHandler(); } catch (_) {}
+        }
         rbClear();
+        seqState = SEQUENCE_STATE.IDLE;
+        seqHandler = null;
+        seqTimerId = null;
       }, TIMEOUT);
       return true;
     }
     // No children: execute immediately
-    if (pendingTimerId) { clearTimeout(pendingTimerId); pendingTimerId = null; }
-    pendingExact = null;
-    result.handler(e);
+    try { result.handler(e); } catch (_) {}
     rbClear();
     return true;
   }
 
   if (result.type === "prefix") {
-    // Wait for the rest of the sequence; if a shorter exact exists, execute it on timeout
-    if (timeoutId) clearTimeout(timeoutId);
+    // Wait for more tokens; remember lastExact (if any) to run on timeout
+    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
     const lastExact = result.lastExact; // may be null
-    timeoutId = setTimeout(() => {
-      if (lastExact?.handler) {
-        try {
-          lastExact.handler();
-        } catch (_) {}
+    seqState = SEQUENCE_STATE.PREFIX;
+    seqHandler = lastExact?.handler || null;
+    seqTimerId = setTimeout(() => {
+      if (seqState === SEQUENCE_STATE.PREFIX && seqHandler) {
+        try { seqHandler(); } catch (_) {}
       }
       rbClear();
-      timeoutId = null;
+      seqState = SEQUENCE_STATE.IDLE;
+      seqHandler = null;
+      seqTimerId = null;
     }, TIMEOUT);
     return true;
   }
 
   // No match with current buffer; try with only the latest token
   // If we had a pending exact waiting for continuation, flush it immediately on divergence
-  if (pendingExact) {
-    if (pendingTimerId) { clearTimeout(pendingTimerId); pendingTimerId = null; }
-    try { pendingExact(); } catch (_) {}
-    pendingExact = null;
+  if (seqState === SEQUENCE_STATE.PENDING_EXACT && seqHandler) {
+    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
+    try { seqHandler(); } catch (_) {}
+    seqState = SEQUENCE_STATE.IDLE;
+    seqHandler = null;
   }
 
   rbSetLatest(token);
   result = attemptMatchFromRing();
   if (result.type === "exact") {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-    }
-    // If this exact also has children, set pending instead of immediate exec
+    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
+    seqState = SEQUENCE_STATE.IDLE;
+    seqHandler = null;
+    // If this exact also has children, delay execution
     if (result.hasChildren) {
-      pendingExact = result.handler;
-      if (pendingTimerId) clearTimeout(pendingTimerId);
-      pendingTimerId = setTimeout(() => {
-        try { pendingExact && pendingExact(); } catch (_) {}
-        pendingExact = null;
-        pendingTimerId = null;
+      seqState = SEQUENCE_STATE.PENDING_EXACT;
+      seqHandler = result.handler;
+      seqTimerId = setTimeout(() => {
+        if (seqState === SEQUENCE_STATE.PENDING_EXACT && seqHandler) {
+          try { seqHandler(); } catch (_) {}
+        }
         rbClear();
+        seqState = SEQUENCE_STATE.IDLE;
+        seqHandler = null;
+        seqTimerId = null;
       }, TIMEOUT);
       return true;
     }
-    if (pendingTimerId) { clearTimeout(pendingTimerId); pendingTimerId = null; }
-    pendingExact = null;
-    result.handler(e);
+    try { result.handler(e); } catch (_) {}
     rbClear();
     return true;
   }
   if (result.type === "prefix") {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
+    if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
+    seqState = SEQUENCE_STATE.PREFIX;
+    seqHandler = null; // no shorter exact known here
+    seqTimerId = setTimeout(() => {
+      if (seqState === SEQUENCE_STATE.PREFIX && seqHandler) {
+        try { seqHandler(); } catch (_) {}
+      }
       rbClear();
-      timeoutId = null;
+      seqState = SEQUENCE_STATE.IDLE;
+      seqHandler = null;
+      seqTimerId = null;
     }, TIMEOUT);
     return true;
   }
 
   // Still no match
-  if (timeoutId) {
-    clearTimeout(timeoutId);
-    timeoutId = null;
-  }
+  if (seqTimerId) { clearTimeout(seqTimerId); seqTimerId = null; }
+  seqState = SEQUENCE_STATE.IDLE;
+  seqHandler = null;
   rbClear();
   return false;
 };
