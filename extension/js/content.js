@@ -1,3 +1,9 @@
+var KEYBIND_CONFIG = window.KEYBIND_CONFIG;
+var UI_CONFIG = window.UI_CONFIG;
+
+console.log("Keybind Config:", KEYBIND_CONFIG);
+console.log("UI Config:", UI_CONFIG);
+
 if (!window.keybindListenerInstalled) {
   window.keybindListenerInstalled = true;
 

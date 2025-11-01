@@ -13,13 +13,22 @@ export const UI_CONFIG = {
   },
   SEARCH: {
     MAX_RESULTS: 50,
-    DEBOUNCE_MS: 16, // ~60fps
+    DEBOUNCE_MS: 16,
   },
 };
 
 export const TIME_THRESHOLDS = {
-  JUST_NOW: 60 * 1000, // 1 minute
-  MINUTES: 60 * 60 * 1000, // 1 hour
-  HOURS: 24 * 60 * 60 * 1000, // 1 day
-  DAYS: 7 * 24 * 60 * 60 * 1000, // 1 week
+  JUST_NOW: 60 * 1000,
+  MINUTES: 60 * 60 * 1000,
+  HOURS: 24 * 60 * 60 * 1000,
+  DAYS: 7 * 24 * 60 * 60 * 1000,
 };
+
+export const RESTRICTED_URL = [
+  "chrome://",
+  "brave://",
+  "edge://",
+  "about:",
+  "chrome-extension://",
+  "moz-extension://",
+];
