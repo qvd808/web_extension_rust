@@ -1,87 +1,101 @@
 // ===== Command Configuration =====
+const distance_scroll = 80;
 const VIM_COMMANDS = {
   immediate: [
     {
-      key: 'i',
-      mode: 'normal',
-      description: 'Enter insert mode',
+      key: "i",
+      mode: "normal",
+      description: "Enter insert mode",
       handler: (e, context) => {
         if (context.isInput) return false;
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        context.setMode('insert');
+        context.setMode("insert");
         return true;
-      }
+      },
     },
     {
-      key: 'escape',
-      mode: 'insert',
-      description: 'Exit insert mode',
+      key: "escape",
+      mode: "insert",
+      description: "Exit insert mode",
       handler: (e, context) => {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        context.setMode('normal');
+        context.setMode("normal");
         if (context.isInput && context.activeElement) {
           context.activeElement.blur();
         }
         return true;
-      }
-    }
-  ]
+      },
+    },
+    {
+      key: "h",
+      mode: "normal",
+      description: "Scroll left",
+      handler: (e, _context) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        window.scrollBy({ left: -1 * distance_scroll, behavior: "smooth" });
+        return true;
+      },
+    },
+    {
+      key: "j",
+      mode: "normal",
+      description: "Scroll down",
+      handler: (e, _context) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        window.scrollBy({ top: distance_scroll, behavior: "smooth" });
+        return true;
+      },
+    },
+    {
+      key: "k",
+      mode: "normal",
+      description: "Scroll up",
+      handler: (e, _context) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        window.scrollBy({ top: -1 * distance_scroll, behavior: "smooth" });
+        return true;
+      },
+    },
+    {
+      key: "l",
+      mode: "normal",
+      description: "Scroll right",
+      handler: (e, _context) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        window.scrollBy({ left: distance_scroll, behavior: "smooth" });
+        return true;
+      },
+    },
+  ],
 };
 
-// ===== Vim Mode Functions =====
+// ===== Public functions =====
 export function initVimMode() {
-  console.log("initVimMode called");
+  // console.log("initVimMode called");
   if (typeof window.vimMode === "undefined") {
     window.vimMode = "normal";
   }
-  console.log("Current vim mode:", window.vimMode);
+  // console.log("Current vim mode:", window.vimMode);
   updateModeIndicator();
   injectVimStyles();
-  console.log("Vim mode initialized");
+  // console.log("Vim mode initialized");
 }
 
 export function setMode(mode) {
   window.vimMode = mode;
   updateModeIndicator();
-}
-
-function updateModeIndicator() {
-  console.log("updateModeIndicator called");
-  let indicator = document.getElementById("vim-mode-indicator");
-
-  if (!indicator) {
-    console.log("Creating new vim mode indicator");
-    indicator = document.createElement("div");
-    indicator.id = "vim-mode-indicator";
-    if (document.body) {
-      document.body.appendChild(indicator);
-      console.log("Indicator appended to body");
-    } else {
-      console.warn("Vim mode: document.body not ready yet");
-      return;
-    }
-  }
-
-  indicator.textContent = window.vimMode.toUpperCase();
-  Object.assign(indicator.style, {
-    position: "fixed",
-    bottom: "20px",
-    right: "20px",
-    padding: "8px 16px",
-    backgroundColor: window.vimMode === "normal" ? "#4CAF50" : "#2196F3",
-    color: "white",
-    fontFamily: "monospace",
-    fontSize: "14px",
-    fontWeight: "bold",
-    borderRadius: "4px",
-    zIndex: 999998,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-    transition: "background-color 0.2s",
-  });
 }
 
 export function isInputField(element) {
@@ -135,7 +149,7 @@ export function createVimKeydownHandler(addKey, processBuffer) {
     const handlerContext = {
       isInput,
       activeElement,
-      setMode: (mode) => setMode(mode)
+      setMode: (mode) => setMode(mode),
     };
 
     // Check immediate commands (i and escape)
@@ -189,5 +203,41 @@ export function cleanupVimMode() {
 
   document.querySelectorAll(".vim-mode-highlight").forEach((el) => {
     el.classList.remove("vim-mode-highlight");
+  });
+}
+
+// =================== Private function ===========================
+function updateModeIndicator() {
+  // console.log("updateModeIndicator called");
+  let indicator = document.getElementById("vim-mode-indicator");
+
+  if (!indicator) {
+    // console.log("Creating new vim mode indicator");
+    indicator = document.createElement("div");
+    indicator.id = "vim-mode-indicator";
+    if (document.body) {
+      document.body.appendChild(indicator);
+      console.log("Indicator appended to body");
+    } else {
+      console.warn("Vim mode: document.body not ready yet");
+      return;
+    }
+  }
+
+  indicator.textContent = window.vimMode.toUpperCase();
+  Object.assign(indicator.style, {
+    position: "fixed",
+    bottom: "20px",
+    right: "20px",
+    padding: "8px 16px",
+    backgroundColor: window.vimMode === "normal" ? "#4CAF50" : "#2196F3",
+    color: "white",
+    fontFamily: "monospace",
+    fontSize: "14px",
+    fontWeight: "bold",
+    borderRadius: "4px",
+    zIndex: 999998,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+    transition: "background-color 0.2s",
   });
 }

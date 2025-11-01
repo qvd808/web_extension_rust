@@ -1,5 +1,86 @@
 (() => {
   // extension/js/src/vim_mode.js
+  var distance_scroll = 80;
+  var VIM_COMMANDS = {
+    immediate: [
+      {
+        key: "i",
+        mode: "normal",
+        description: "Enter insert mode",
+        handler: (e, context) => {
+          if (context.isInput) return false;
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          context.setMode("insert");
+          return true;
+        }
+      },
+      {
+        key: "escape",
+        mode: "insert",
+        description: "Exit insert mode",
+        handler: (e, context) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          context.setMode("normal");
+          if (context.isInput && context.activeElement) {
+            context.activeElement.blur();
+          }
+          return true;
+        }
+      },
+      {
+        key: "h",
+        mode: "normal",
+        description: "Scroll left",
+        handler: (e, _context) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          window.scrollBy({ left: -1 * distance_scroll, behavior: "smooth" });
+          return true;
+        }
+      },
+      {
+        key: "j",
+        mode: "normal",
+        description: "Scroll down",
+        handler: (e, _context) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          window.scrollBy({ top: distance_scroll, behavior: "smooth" });
+          return true;
+        }
+      },
+      {
+        key: "k",
+        mode: "normal",
+        description: "Scroll up",
+        handler: (e, _context) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          window.scrollBy({ top: -1 * distance_scroll, behavior: "smooth" });
+          return true;
+        }
+      },
+      {
+        key: "l",
+        mode: "normal",
+        description: "Scroll right",
+        handler: (e, _context) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          window.scrollBy({ left: distance_scroll, behavior: "smooth" });
+          return true;
+        }
+      }
+    ]
+  };
   function initVimMode() {
     console.log("initVimMode called");
     if (typeof window.vimMode === "undefined") {
@@ -83,22 +164,16 @@
       const key = e.key.toLowerCase();
       const activeElement = document.activeElement;
       const isInput = isInputField(activeElement);
-      if (key === "escape" && window.vimMode === "insert") {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        setMode("normal");
-        if (isInput) {
-          activeElement.blur();
+      const handlerContext = {
+        isInput,
+        activeElement,
+        setMode: (mode) => setMode(mode)
+      };
+      for (const cmd of VIM_COMMANDS.immediate) {
+        if (cmd.key === key && window.vimMode === cmd.mode) {
+          const handled = cmd.handler(e, handlerContext);
+          if (handled) return;
         }
-        return;
-      }
-      if (key === "i" && window.vimMode === "normal" && !isInput) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        setMode("insert");
-        return;
       }
       if (window.vimMode === "insert") {
         return;
