@@ -2,9 +2,9 @@ const esbuild = require('esbuild');
 const path = require('path');
 
 esbuild.build({
-  entryPoints: [path.join(__dirname, 'extension/js/main.js')],
+  entryPoints: [path.join(__dirname, 'extension/js/src/main.js')],
   bundle: true,
-  outfile: path.join(__dirname, 'extension/js/content.js'),
+  outfile: path.join(__dirname, 'extension/js/dist/content.js'),
   format: 'iife',
   platform: 'browser',
   target: 'es2020',

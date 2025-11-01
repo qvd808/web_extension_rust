@@ -2,12 +2,6 @@
 target/
 Cargo.lock
 
-# WASM build output
-extension/js/wasm/
-
-# Generated content script (built from main.js + vim_mode.js)
-extension/js/content.js
-
 # Node
 node_modules/
 package-lock.json

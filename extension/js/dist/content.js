@@ -1,5 +1,5 @@
 (() => {
-  // extension/js/vim_mode.js
+  // extension/js/src/vim_mode.js
   function initVimMode() {
     console.log("initVimMode called");
     if (typeof window.vimMode === "undefined") {
@@ -136,7 +136,7 @@
     });
   }
 
-  // extension/js/main.js
+  // extension/js/src/main.js
   var KEYBIND_CONFIG = window.KEYBIND_CONFIG;
   var UI_CONFIG = window.UI_CONFIG;
   if (!window.keybindListenerInstalled) {

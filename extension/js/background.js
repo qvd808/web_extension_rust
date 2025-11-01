@@ -38,7 +38,7 @@ async function injectContentScript(tabId) {
     // Then inject the content script
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ["js/content.js"],
+      files: ["js/dist/content.js"],
       world: "ISOLATED",
     });
   } catch (err) {
