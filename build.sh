@@ -17,6 +17,10 @@ rm -f extension/js/wasm/package.json
 rm -f extension/js/wasm/README.md
 
 echo ""
+echo "Step 3: Building content script with esbuild..."
+npm run build:content
+
+echo ""
 echo "✅ Build complete!"
 echo ""
 echo "📦 Extension files are in the 'extension/' folder"

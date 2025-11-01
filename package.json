@@ -1,0 +1,25 @@
+{
+  "name": "web_ext_rust",
+  "version": "1.0.0",
+  "description": "### References - [Chrome extension example with Rust and WASM](https://dev.to/rimutaka/chrome-extension-with-rust-and-wasm-by-example-5cbh)",
+  "main": "index.js",
+  "scripts": {
+    "build:content": "node build-content.js",
+    "watch:content": "node build-content.js --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qvd808/web_extension_rust.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/qvd808/web_extension_rust/issues"
+  },
+  "homepage": "https://github.com/qvd808/web_extension_rust#readme",
+  "devDependencies": {
+    "esbuild": "^0.25.11"
+  }
+}
