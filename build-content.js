@@ -28,21 +28,6 @@ async function build() {
     logLevel: 'info',
   });
 
-  // 2) DOM logic → ESM module (dynamic import target)
-  await esbuild.build({
-    entryPoints: [path.join(srcDir, 'dom_logic.js')],
-    bundle: true,
-    outfile: path.join(distDir, 'dom_logic.js'),
-    format: 'esm',
-    platform: 'browser',
-    target: 'es2020',
-    minify: !isDev,
-    sourcemap: isDev ? 'inline' : false,
-    legalComments: isDev ? 'inline' : 'none',
-    drop: isDev ? [] : ['console', 'debugger'],
-    logLevel: 'info',
-  });
-
   // 3) Vim display → ESM module (dynamic import target)
   await esbuild.build({
     entryPoints: [path.join(srcDir, 'vim_display.js')],
