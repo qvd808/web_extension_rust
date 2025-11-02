@@ -10,6 +10,24 @@ const VIM_MODES = {
 const SCROLL_STEP = 80;
 const AUTO_SCROLL_EASE = 10;
 
+// Lazy loader for the search UI (built as an ESM dynamic import target)
+let __searchLoaded = false;
+let __searchModPromise = null;
+function loadSearchUI() {
+  if (__searchLoaded) return __searchModPromise;
+  if (!__searchModPromise) {
+    const url = (globalThis.chrome && chrome.runtime && chrome.runtime.getURL)
+      ? chrome.runtime.getURL("js/dist/search_ui.js")
+      : "/js/dist/search_ui.js"; // fallback path for dev
+    __searchModPromise = import(url).then((mod) => {
+      try { mod.initSearchUI?.(); } catch (_) {}
+      __searchLoaded = true;
+      return mod;
+    });
+  }
+  return __searchModPromise;
+}
+
 const VIM_COMMANDS = {
   immediate: [
     {
@@ -18,6 +36,16 @@ const VIM_COMMANDS = {
       description: "Enter insert mode",
       handler: () => {
         currentVimMode = VIM_MODES.INSERT;
+        return true;
+      },
+    },
+    {
+      key: "ffq",
+      mode: "normal",
+      description: "Open search panel",
+      handler: (_evt) => {
+        // Lazy-load the search UI bundle like vim_display
+        loadSearchUI().then((m) => m.openSearchPanel?.());
         return true;
       },
     },
@@ -424,6 +452,10 @@ const insertModeHandler = (e) => {
 export const handleKeydown = (e) => {
   switch (currentVimMode) {
     case VIM_MODES.NORMAL: {
+      // If search overlay is open, let it handle keys and don't intercept
+      if (globalThis.__wer_search_open) {
+        return;
+      }
       e.preventDefault();
       // e.stopPropagation();
       // e.stopImmediatePropagation();

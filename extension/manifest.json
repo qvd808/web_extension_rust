@@ -15,9 +15,7 @@
     {
       "resources": [
         "js/wasm/*.wasm",
-        "js/search.html",
-        "js/search.js",
-        "js/search.css",
+        "js/dist/search_ui.js",
         "js/dist/vim_display.js"
       ],
       "matches": ["<all_urls>"],

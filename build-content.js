@@ -43,6 +43,21 @@ async function build() {
     logLevel: 'info',
   });
 
+  // 4) Search UI → ESM module (dynamic import target)
+  await esbuild.build({
+    entryPoints: [path.join(srcDir, 'search_ui.js')],
+    bundle: true,
+    outfile: path.join(distDir, 'search_ui.js'),
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2020',
+    minify: !isDev,
+    sourcemap: isDev ? 'inline' : false,
+    legalComments: isDev ? 'inline' : 'none',
+    drop: isDev ? [] : ['console', 'debugger'],
+    logLevel: 'info',
+  });
+
   console.log(`✅ Built bootstrap, DOM logic, and Vim display (${isDev ? 'dev' : 'prod'})`);
 }
 
