@@ -24,12 +24,17 @@ const debouncer = new Debouncer(120);
 const client = new BackgroundSearchClient();
 const model = new ResultsModel();
 let lastQueryToken = 0;
+let initPromise = null;
 
 export function initSearchUI() {
-  if (inited) return;
+  if (inited) return initPromise;
   inited = true;
-  ensureSearchDOM();
-  attachListeners();
+  if (!initPromise) {
+    initPromise = ensureSearchDOM().then(() => {
+      attachListeners();
+    });
+  }
+  return initPromise;
 }
 
 function attachListeners() {
@@ -101,31 +106,39 @@ function activateSelection() {
 }
 
 export function openSearchPanel() {
-  initSearchUI();
-  setOverlayVisible(true);
-  globalThis.__wer_search_open = true;
-  ensureInputListener();
-  // Trigger initial search with current value (possibly empty)
-  queryAndRender();
-  focusSearchInput();
-}
-
-export function closeSearchPanel() {
-  initSearchUI();
-  setOverlayVisible(false);
-  globalThis.__wer_search_open = false;
-}
-
-export function toggleSearchPanel() {
-  initSearchUI();
-  const willOpen = !isOverlayVisible();
-  setOverlayVisible(willOpen);
-  globalThis.__wer_search_open = willOpen;
-  if (willOpen) {
+  const open = async () => {
+    await initSearchUI();
+    setOverlayVisible(true);
+    globalThis.__wer_search_open = true;
     ensureInputListener();
     queryAndRender();
     focusSearchInput();
-  }
+  };
+  open().catch((err) => console.error('Failed to open search panel:', err));
+}
+
+export function closeSearchPanel() {
+  const close = async () => {
+    await initSearchUI();
+    setOverlayVisible(false);
+    globalThis.__wer_search_open = false;
+  };
+  close().catch(() => {});
+}
+
+export function toggleSearchPanel() {
+  const toggle = async () => {
+    await initSearchUI();
+    const willOpen = !isOverlayVisible();
+    setOverlayVisible(willOpen);
+    globalThis.__wer_search_open = willOpen;
+    if (willOpen) {
+      ensureInputListener();
+      queryAndRender();
+      focusSearchInput();
+    }
+  };
+  toggle().catch((err) => console.error('Failed to toggle search panel:', err));
 }
 
 export function cleanupSearchUI() {

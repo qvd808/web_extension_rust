@@ -5,13 +5,16 @@ let inited = false;
 let host = null;        // fixed host attached to DOM (full-viewport container)
 let shadow = null;      // ShadowRoot
 let overlayRoot = null; // centers the overlay box; hidden by default
-let overlayEl = null;   // .search-overlay (900x500 panel)
+let overlayEl = null;   // .search-overlay (loaded from external HTML)
 let inputEl = null;     // #search-input
 let resultsEl = null;   // #results-container
 let loadingEl = null;   // #loading
 let previewTitleEl = null;  // .preview-title
 let previewUrlEl = null;    // .preview-url
 let previewContentEl = null; // .preview-content
+
+// Global template cache (loaded once, reused forever)
+let templatePromise = null;
 
 function ensureAttached() {
   if (!host) return;
@@ -27,7 +30,33 @@ function ensureAttached() {
   }
 }
 
-export function ensureSearchDOM() {
+async function loadTemplate() {
+  if (templatePromise) return templatePromise;
+  templatePromise = (async () => {
+    const htmlUrl = (globalThis.chrome && chrome.runtime && chrome.runtime.getURL)
+      ? chrome.runtime.getURL('js/search.html')
+      : '/js/search.html';
+    try {
+      const resp = await fetch(htmlUrl);
+      if (!resp.ok) throw new Error('Template fetch failed');
+      const htmlText = await resp.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+      const overlayNode = doc.querySelector('.search-overlay');
+      if (!overlayNode) throw new Error('No .search-overlay in template');
+      return overlayNode.cloneNode(true);
+    } catch (err) {
+      console.warn('Failed to load search template, using fallback:', err);
+      const fallback = document.createElement('div');
+      fallback.className = 'search-overlay';
+      fallback.innerHTML = '<div class="search-panel"><input id="search-input" placeholder="Search tabs..." /><div id="results-container"></div><div id="loading" style="display:none">Loading...</div></div><div class="preview-panel"><div class="preview-title">Preview</div><div class="preview-url"></div><div class="preview-content">No tab selected</div></div>';
+      return fallback;
+    }
+  })();
+  return templatePromise;
+}
+
+export async function ensureSearchDOM() {
   if (inited) return refs();
   inited = true;
 
@@ -39,141 +68,24 @@ export function ensureSearchDOM() {
 
   shadow = host.attachShadow({ mode: "open" });
 
-  const style = document.createElement("style");
-  style.textContent = `
-    :host { all: initial; }
-    .overlay-root {
-      position: fixed; inset: 0;
-      display: none; /* toggled to flex when visible */
-      align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.35);
-      backdrop-filter: blur(2px);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
-    }
+  // Attach external stylesheet into shadow for isolated styling
+  const cssLink = document.createElement('link');
+  cssLink.setAttribute('rel', 'stylesheet');
+  const cssUrl = (globalThis.chrome && chrome.runtime && chrome.runtime.getURL)
+    ? chrome.runtime.getURL('js/search.css')
+    : '/js/search.css';
+  cssLink.setAttribute('href', cssUrl);
 
-    .search-overlay {
-      width: 900px;
-      height: 500px;
-      background-color: #1a1a1a;
-      border: 1px solid #333;
-      border-radius: 8px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      display: flex;
-      flex-direction: row;
-      overflow: hidden;
-      animation: slideIn 0.2s ease-out;
-      color: #e0e0e0;
-    }
+  overlayRoot = document.createElement('div');
+  overlayRoot.className = 'overlay-root';
 
-    @keyframes slideIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    .search-panel {
-      width: 45%;
-      display: flex;
-      flex-direction: column;
-      background-color: #242424;
-      border-right: 1px solid #333;
-    }
-
-    #search-input {
-      width: 100%;
-      padding: 16px 20px;
-      font-size: 15px;
-      border: none;
-      border-bottom: 2px solid #333;
-      background-color: #1a1a1a;
-      color: #e0e0e0;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    #search-input::placeholder { color: #666; }
-    #search-input:focus { border-bottom-color: #4a9eff; background-color: #1e1e1e; }
-
-    #results-container {
-      flex: 1;
-      overflow-y: auto;
-      background-color: #242424;
-      padding: 0;
-    }
-
-    .result-item {
-      padding: 12px 20px;
-      cursor: pointer;
-      border-bottom: 1px solid #2a2a2a;
-      transition: all 0.15s ease;
-      position: relative;
-    }
-    .result-item:hover { background-color: #2d2d2d; }
-    .result-item.selected {
-      background-color: #2a4a6a;
-      border-left: 3px solid #4a9eff;
-      padding-left: 17px;
-    }
-    .result-item.selected::before {
-      content: "▶";
-      position: absolute; right: 16px;
-      color: #4a9eff; font-size: 10px;
-    }
-    .result-title {
-      font-size: 14px; color: #e0e0e0; margin-bottom: 4px; font-weight: 500;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .result-group { font-size: 11px; color: #888; }
-    .result-item.selected .result-title { color: #fff; }
-    .result-item.selected .result-group { color: #aaa; }
-    .no-results { padding: 40px 20px; text-align: center; color: #666; font-size: 13px; }
-
-    .preview-panel {
-      width: 55%;
-      background-color: #1a1a1a;
-      padding: 24px;
-      overflow-y: auto;
-      font-size: 13px;
-      line-height: 1.6;
-      color: #d4d4d4;
-    }
-    .preview-panel .preview-title {
-      font-size: 18px; font-weight: 600; color: #ffffff; margin-bottom: 12px;
-      padding-bottom: 12px; border-bottom: 2px solid #333; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis;
-    }
-  .preview-panel .preview-content { color: #aaa; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
-  .preview-panel .preview-url { color: #4a9eff; font-size: 12px; margin-bottom: 20px; word-break: break-all; line-height: 1.5; }
-  .preview-panel .preview-meta-row { margin: 4px 0; }
-  .preview-panel .preview-label { font-weight: 600; color: #ddd; margin-right: 6px; }
-  .preview-panel .preview-value { color: #bbb; }
-    #loading { text-align: center; color: #858585; padding: 20px; font-size: 13px; }
-
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #1a1a1a; }
-    ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #555; }
-  `;
-
-  overlayRoot = document.createElement("div");
-  overlayRoot.className = "overlay-root";
-
-  overlayEl = document.createElement("div");
-  overlayEl.className = "search-overlay";
-  overlayEl.innerHTML = `
-    <div class="search-panel">
-      <input type="text" id="search-input" placeholder="Search tabs..." />
-      <div id="results-container"></div>
-      <div id="loading" style="display:none">Loading...</div>
-    </div>
-    <div class="preview-panel">
-      <div class="preview-title">Preview</div>
-      <div class="preview-url"></div>
-      <div class="preview-content">No tab selected</div>
-    </div>
-  `;
-
-  overlayRoot.appendChild(overlayEl);
-  shadow.append(style, overlayRoot);
+  shadow.append(cssLink, overlayRoot);
   ensureAttached();
+
+  // Load template asynchronously (cached after first load)
+  const templateNode = await loadTemplate();
+  overlayEl = templateNode.cloneNode(true);
+  overlayRoot.appendChild(overlayEl);
 
   // Cache important nodes
   inputEl = overlayEl.querySelector('#search-input');

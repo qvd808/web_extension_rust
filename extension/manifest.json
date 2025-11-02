@@ -16,7 +16,9 @@
       "resources": [
         "js/wasm/*.wasm",
         "js/dist/search_ui.js",
-        "js/dist/vim_display.js"
+        "js/dist/vim_display.js",
+        "js/search.html",
+        "js/search.css"
       ],
       "matches": ["<all_urls>"],
       "exclude_matches": ["chrome://*/*", "brave://*/*", "edge://*/*"]

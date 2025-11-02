@@ -15,7 +15,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["js/wasm/*.wasm", "js/dist/vim_display.js"],
+      "resources": [
+        "js/wasm/*.wasm",
+        "js/dist/vim_display.js",
+        "js/dist/search_ui.js",
+        "js/search.html",
+        "js/search.css"
+      ],
       "matches": ["<all_urls>"]
     }
   ]
